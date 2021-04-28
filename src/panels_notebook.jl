@@ -245,25 +245,11 @@ md"""
 """
   A sheet of plywood we can buy frm the lumber yard.
   """
-struct AvailablePanel <: CuttablePanel
+struct AvailablePanel <: AbstractPanel
   label::String
   width::LengthType
   length::LengthType
   cost
-end
-
-# ╔═╡ 8d97af1c-ebdb-49ed-b563-029a8fc430d7
-begin	
-  function Base.getproperty(panel::AvailablePanel, prop::Symbol)
-    if prop == :x || prop == :y
-      return 0u"inch"
-    end
-    return getfield(panel, prop)
-  end
-
-  function Base.propertynames(panel::AvailablePanel; private=false)
-    (fieldnames(typeof(panel))..., :x, :y)
-  end
 end
 
 # ╔═╡ f6a43438-d7b0-442d-bb05-9e4488855665
@@ -285,8 +271,38 @@ begin    # Supplier Data
     AvailablePanel("30 x 60 x 1/2", 30u"inch", 60u"inch", 30),
     AvailablePanel("30 x 30 x 1/2", 30u"inch", 30u"inch", 19)
   ]
+end
 
-  @assert AVAILABLE_PANELS[1] isa CuttablePanel
+# ╔═╡ 8f925530-7e76-44f7-9557-64d4629a5e39
+md"""
+## BoughtPanel
+
+a BoughtPanel is created to wrap an AvailablePanel when we add it to the working set.  This ensured that when it is cut it has a distinct identity from any other BoughtPanel of the same size.
+"""
+
+# ╔═╡ 235e25dc-7139-4a24-861b-a0e7451a45eb
+begin
+  struct BoughtPanel <: CuttablePanel
+	was::AvailablePanel
+  end
+
+  function Base.getproperty(panel::BoughtPanel, prop::Symbol)
+    was = getfield(panel, :was)
+	@match prop begin
+		:was          =>  was
+		:x            =>  0u"inch"
+		:y            =>  0u"inch"
+		:length       =>  was.length
+		:width        =>  was.width
+	    _             =>  getfield(was, prop)
+    end
+  end
+
+  function Base.propertynames(panel::BoughtPanel, private::Bool=false)
+    (fieldnames(typeof(panel))...,
+     fieldnames(typeof(panel.was))...)
+  end
+
 end
 
 # ╔═╡ 61e200af-6d6a-48c0-98e5-41b98dc2de9c
@@ -613,7 +629,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
     for p in searcher.available_stock
       if any((w) -> fitsin(w, p), state.wanted)
 	enqueue(searcher,
-		SearchState(state, p.cost, nothing, nothing, p))
+		SearchState(state, p.cost, nothing, nothing, BoughtPanel(p)))
       end
     end
     return nothing
@@ -732,9 +748,10 @@ collect(Iterators.flatten(((1,2,3), (4,5,6))))
 # ╠═ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─adb89a84-5223-42db-90d5-8703b2d9a3b7
 # ╠═5176ae29-b9ac-4c20-82c2-2e054a32eecc
-# ╠═8d97af1c-ebdb-49ed-b563-029a8fc430d7
 # ╟─f6a43438-d7b0-442d-bb05-9e4488855665
 # ╠═65adef2d-9a53-4310-81a0-5dbb6d0918ca
+# ╟─8f925530-7e76-44f7-9557-64d4629a5e39
+# ╠═235e25dc-7139-4a24-861b-a0e7451a45eb
 # ╟─61e200af-6d6a-48c0-98e5-41b98dc2de9c
 # ╠═89b2a4cc-de85-41d0-b91d-44600fb39fe6
 # ╟─41a5afbb-146a-407e-836e-299d80d7c55d
