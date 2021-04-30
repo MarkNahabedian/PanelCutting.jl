@@ -11,8 +11,8 @@ begin
   using Match
   using DataStructures
   # using UnitfulCurrency   # trounble loading UnitfulCurrency
+  using NativeSVG
 end
-
 
 # ╔═╡ 60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
 md"""
@@ -43,9 +43,15 @@ md"""
 begin
   abstract type Axis end
 
-struct LengthAxis <: Axis end
-struct WidthAxis <: Axis end
+  struct LengthAxis <: Axis end
+  struct WidthAxis <: Axis end
 
+"""
+    other(axis)
+returns the axis that is perpendicular to the specified axis.
+"""
+  function other end
+	
 function other(axis::LengthAxis)::Axis
   WidthAxis()
 end
@@ -76,63 +82,71 @@ md"""
 # ╔═╡ 98a48a7c-51e9-46f9-bdb4-e6a6b8380061
 begin
   abstract type AbstractPanel end
-abstract type CuttablePanel <: AbstractPanel end
-abstract type AbstractWantedPanel <: AbstractPanel end
+  abstract type CuttablePanel <: AbstractPanel end
+  abstract type AbstractWantedPanel <: AbstractPanel end
 
-LengthType = Unitful.Length
+  LengthType = Unitful.Length
 
-function area(panel::AbstractPanel)
-  panel.length * panel.width
-end
-
-function diagonal(panel::AbstractPanel)
-  sqrt(panel.length * panel.length + panel.width * panel.width)
-end
-
-"""Return the greater of the Panel's two dimensions."""
-function major(p::AbstractPanel)
-  max(p.length, p.width)
-end
-
-"""Return the lesser of the Panel's two dimensions."""
-function minor(p::AbstractPanel)
-  min(p.length, p.width)
-end
-
-function distance(panel::AbstractPanel, axis::WidthAxis)
-  panel.width
-end
-
-function distance(panel::AbstractPanel, axis::LengthAxis)
-  return panel.length
-end
-
-"""
-	  See if small can be cut from big
-	  """
-function fitsin(small::AbstractPanel, big::AbstractPanel)::Bool
-  return minor(small) <= minor(big) && major(small) <= major(big)
-end
-
-"""
-	  an ordering function for sorting panels by size.
-	  smaller(p1, p2) does not imply fitsin(p1, p2).
-	  """
-function smaller(p1::AbstractPanel, p2::AbstractPanel)::Bool
-  if fitsin(p1, p2)   # superfluous?
-    return true
-  elseif major(p1) > major(p2)
-    return false
-  elseif major(p1) < major(p2)
-    return true
-  elseif minor(p1) > minor(p2)
-    return false
-  elseif minor(p1) > minor(p2)
-    return true
-  else
-    return false
+  function area(panel::AbstractPanel)
+    panel.length * panel.width
   end
-end
+
+  function diagonal(panel::AbstractPanel)
+    sqrt(panel.length * panel.length + panel.width * panel.width)
+  end
+
+  """Return the greater of the Panel's two dimensions."""
+  function major(p::AbstractPanel)
+    max(p.length, p.width)
+  end
+
+  """Return the lesser of the Panel's two dimensions."""
+  function minor(p::AbstractPanel)
+    min(p.length, p.width)
+  end
+
+  function distance(panel::AbstractPanel, axis::WidthAxis)
+    panel.width
+  end
+
+  function distance(panel::AbstractPanel, axis::LengthAxis)
+    return panel.length
+  end
+
+  function moveby(x, y, axis::LengthAxis, distance)
+    return (x + distance, y)
+  end
+
+  function moveby(x, y, axis::WidthAxis, distance)
+    return (x, y + distance)
+  end
+	
+"""
+  See if small can be cut from big
+  """
+  function fitsin(small::AbstractPanel, big::AbstractPanel)::Bool
+    return minor(small) <= minor(big) && major(small) <= major(big)
+  end
+
+  """
+            an ordering function for sorting panels by size.
+            smaller(p1, p2) does not imply fitsin(p1, p2).
+            """
+  function smaller(p1::AbstractPanel, p2::AbstractPanel)::Bool
+    if fitsin(p1, p2)   # superfluous?
+      return true
+    elseif major(p1) > major(p2)
+      return false
+    elseif major(p1) < major(p2)
+      return true
+    elseif minor(p1) > minor(p2)
+      return false
+    elseif minor(p1) > minor(p2)
+      return true
+    else
+      return false
+    end
+  end
 end
 
 # ╔═╡ 29c94131-5b13-4588-a772-d517198d2163
@@ -383,6 +397,7 @@ begin
     @match property begin
       :was        => getfield(panel, :was)
       :wanted     => getfield(panel, :wanted)
+      :label      => getfield(getfield(panel, :wanted), :label)
       _           => Base.getproperty(Core.getfield(panel, :was), property)
     end
   end
@@ -458,7 +473,7 @@ end
 
 # ╔═╡ 966f82be-7fdf-44d2-9c9f-3e27c19aef89
 begin
-  local panel1 = AVAILABLE_PANELS[1]
+  local panel1 = BoughtPanel(AVAILABLE_PANELS[1])
   local at = 22u"inch"
   cut1, cut2 = cut(panel1, LengthAxis(), at)
   @assert cut1.length == at
@@ -677,8 +692,153 @@ function run(searcher::Searcher)
   end
 end
 
-# ╔═╡ 3b082138-5062-433b-b224-24b287851a1d
-subtypes(Axis)
+# ╔═╡ 85f95152-93a2-42cd-80f3-c3d7d931dbfe
+md"""
+# Describing the Cuts using SVG
+"""
+
+# ╔═╡ 134ac318-adb5-4939-96f7-3b70b12ffe43
+macro thismodule()
+	:($__module__)
+end
+
+# ╔═╡ d5b1c891-9529-4876-839f-cddd94d3d800
+#= this macro does not play well with Pluto notebooks
+
+begin
+	# Abstract measurements in svg user space from the dimensions we use
+	# for measuring panels:
+	@Unitful.unit svgd "svgd" SVGDistance 0.01u"inch" false
+	Unitful.register(@thismodule)
+end
+=#
+
+# ╔═╡ 9d0fb461-46e4-4436-a367-5cdf3406474f
+"""
+turn a Unitful length quantity to a floating point number we can use in SVG.
+"""
+function svgdistance(d)::Real
+	ustrip(Real, u"inch", d)
+end
+
+# ╔═╡ c2a34850-17eb-43ca-b6c1-262dc67d6006
+function panelrect(io::IO, panel::AbstractPanel, cssclass::String)
+	g(io) do
+		write(io, "<!-- $(panel.label): $(panel.width) by $(panel.length) -->\n")
+		rect(io; class=cssclass,
+			 x=svgdistance(panel.x),
+			 y=svgdistance(panel.y),
+			 width=svgdistance(panel.width),
+			 height=svgdistance(panel.length))
+	end
+end
+
+# ╔═╡ 36f08b38-d725-48fb-a44e-ebc9491fc215
+begin
+	#= AbstractPanels are related to one another through a directed graph
+	based on various relations.  Here we construct the inverse directed graph,
+	which could be one to many.
+	=#
+	ReversePanelGraph = Dict{AbstractPanel, Vector{AbstractPanel}}
+	
+	function note!(g::ReversePanelGraph, key::AbstractPanel, add::AbstractPanel)
+		push!(get!(g, key, Vector{AbstractPanel}()), add)
+	end
+
+	function makeReversePanelGraph(state::SearchState)::ReversePanelGraph
+		d = ReversePanelGraph()
+		for f in state.finished
+			makeReversePanelGraph(f, d)
+		end
+		return d
+	end
+		
+	function makeReversePanelGraph(panel::AbstractPanel,
+				                   d::ReversePanelGraph)
+		return d
+	end
+		
+	function makeReversePanelGraph(panel::Panel, d::ReversePanelGraph)
+		note!(d, panel.cut_from, panel)
+		makeReversePanelGraph(panel.cut_from, d)
+	end
+	
+	function makeReversePanelGraph(panel::FinishedPanel, d::ReversePanelGraph)
+		note!(d, panel.was, panel)
+		makeReversePanelGraph(panel.was, d)
+	end
+end
+
+# ╔═╡ 099be731-dd16-4f56-af53-269e38ada04b
+const SVG_PANEL_MARGIN = 2u"inch"
+
+# ╔═╡ bcbcf050-ee5f-4531-b432-7e2006fccc1e
+function toSVG(io::IO, state::SearchState)
+	rpg = makeReversePanelGraph(state)
+	write(io, """<?xml version="1.0" encoding="UTF-8"?>\n""")
+	write(io, """<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n""")
+	write(io, """          "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n""")
+	# Outermost SVG:
+	vpwidth = svgdistance(maximum(major.(keys(rpg))) + 2 * SVG_PANEL_MARGIN)
+	vpheight = svgdistance(sum(minor.(keys(rpg))) + 2 * SVG_PANEL_MARGIN)
+	svg(io; xmlns="http://www.w3.org/2000/svg",
+		width="90%",
+		viewbox="0 0 $(vpwidth) $(vpheight)") do
+		style(io; type="text/css") do
+			write(io, """
+			g.everything { background-color: pink; }
+			.cut { stroke-width: 1px; stroke: black; }
+			.factory-edge { stroke-width: 1px; stroke: green; fill: none; }
+			.finished { stroke: none; fill: gray; }
+			""")
+		end
+		g(io; class="everything") do
+			y = SVG_PANEL_MARGIN
+			for stock in filter((p) -> p isa BoughtPanel, keys(rpg))
+				# We might want to have the longer dimension of panel run
+				# horizontallu.  If so, we can apply a 90 degree rotation.
+				if stock.length > stock.width
+					tx = svgdistance(SVG_PANEL_MARGIN)
+					ty = svgdistance(y + stock.width)
+					transform = "rotate(90) translate($tx $ty)"
+					y += stock.width
+				else
+					tx = svgdistance(SVG_PANREL_MARGIN)
+					ty = svgdistance(y)
+					transform = "translate($tx, $ty)"
+					y += stock.length + SVG_PANEL_MARGIN
+				end
+				g(io; transform) do
+					toSVG(io, stock, rpg)
+				end
+			end
+		end
+	end
+end
+
+# ╔═╡ 738201a6-b769-4586-81cd-c8e73c9a6ad9
+function toSVG(io::IO, panel::BoughtPanel, rpg::ReversePanelGraph)
+	# We might want to have the longer dimension of panel run horizontallu.
+	# If so, we can apply a 90 degree rotation.
+	g(io) do
+		panelrect(io, panel, "factory-edge")
+		for p in rpg[panel]
+			toSVG(io, p, rpg)
+		end
+	end
+end
+
+# ╔═╡ deb5d973-3fb6-48c9-87da-ed50eb4cd33d
+function toSVG(io::IO, panel::Panel, rpg::ReversePanelGraph)
+	for p in rpg[panel]
+		toSVG(io, p, rpg)
+	end
+end
+
+# ╔═╡ c90350c2-9c91-43df-b7ed-2ed77f960e6d
+function toSVG(io::IO, panel::FinishedPanel, rpg::ReversePanelGraph)
+	panelrect(io, panel, "finished")
+end
 
 # ╔═╡ 4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 begin
@@ -686,13 +846,15 @@ begin
   run(searcher)
   println(searcher.finished_states)
   searcher
+  buf = IOBuffer()
+  toSVG(buf, searcher.cheapest)
+  foo = take!(buf)
+  if false
+	Drawing(foo)
+  else
+    String(foo)
+  end
 end
-
-# ╔═╡ c79562cb-0d5d-4ffe-877c-2404b817e9c1
-length(wanda_box_panels)
-
-# ╔═╡ f1a3bb57-8ef4-446b-82e2-9df8f79e57c8
-length(AVAILABLE_PANELS)
 
 # ╔═╡ 70685b9d-b660-4443-ae7f-a0659456dc4f
 md"""
@@ -736,50 +898,58 @@ collect(Iterators.flatten(((1,2,3), (4,5,6))))
 # ╔═╡ Cell order:
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
-# ╠═60fdb133-5d21-4445-90f9-3bbe49fb743b
-# ╠═5be6a7bd-b97c-4b97-ab47-9d83b3a2dd77
-# ╠═6835fdd3-eead-4d2b-81ce-a05df4f57499
+# ╟─60fdb133-5d21-4445-90f9-3bbe49fb743b
+# ╟─5be6a7bd-b97c-4b97-ab47-9d83b3a2dd77
+# ╟─6835fdd3-eead-4d2b-81ce-a05df4f57499
 # ╟─1292709e-63f9-4f9f-a6c0-0e9068a4c6b6
-# ╠═98a48a7c-51e9-46f9-bdb4-e6a6b8380061
+# ╟─98a48a7c-51e9-46f9-bdb4-e6a6b8380061
 # ╟─29c94131-5b13-4588-a772-d517198d2163
-# ╠═34bab1fd-ecdc-4054-8c69-5325ae807e1f
+# ╟─34bab1fd-ecdc-4054-8c69-5325ae807e1f
 # ╟─7c51768d-f376-487c-a88d-f795fb01da48
-# ╠═594a5dc5-77cc-4610-8ae0-2ee54abb1d4b
-# ╠═ecacafd3-5f70-41d9-b6cd-6b4893186b2a
+# ╟─594a5dc5-77cc-4610-8ae0-2ee54abb1d4b
+# ╟─ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─adb89a84-5223-42db-90d5-8703b2d9a3b7
-# ╠═5176ae29-b9ac-4c20-82c2-2e054a32eecc
+# ╟─5176ae29-b9ac-4c20-82c2-2e054a32eecc
 # ╟─f6a43438-d7b0-442d-bb05-9e4488855665
-# ╠═65adef2d-9a53-4310-81a0-5dbb6d0918ca
+# ╟─65adef2d-9a53-4310-81a0-5dbb6d0918ca
 # ╟─8f925530-7e76-44f7-9557-64d4629a5e39
-# ╠═235e25dc-7139-4a24-861b-a0e7451a45eb
+# ╟─235e25dc-7139-4a24-861b-a0e7451a45eb
 # ╟─61e200af-6d6a-48c0-98e5-41b98dc2de9c
-# ╠═89b2a4cc-de85-41d0-b91d-44600fb39fe6
+# ╟─89b2a4cc-de85-41d0-b91d-44600fb39fe6
 # ╟─41a5afbb-146a-407e-836e-299d80d7c55d
-# ╠═702afb66-eb60-4d13-84ff-d8eccd9e173c
-# ╠═fbc6012e-8893-4634-b632-1609c5a1d23a
+# ╟─702afb66-eb60-4d13-84ff-d8eccd9e173c
+# ╟─fbc6012e-8893-4634-b632-1609c5a1d23a
 # ╟─63b95b10-769f-4e8c-ad7f-6f6471155c5c
-# ╠═b264c74c-1470-4a0b-a693-922dd40a1216
+# ╟─b264c74c-1470-4a0b-a693-922dd40a1216
 # ╠═c012d7a5-6b89-455c-a4ca-7f50b507d670
 # ╟─2fd93f59-4101-489f-b540-41d3ca48febf
-# ╠═65f4609e-5d6f-4ba6-a941-45c42ac396b4
+# ╟─65f4609e-5d6f-4ba6-a941-45c42ac396b4
 # ╟─b03675d3-327d-4915-9a04-c9c6bbe04924
-# ╠═ce55a015-792b-41e1-9426-e5a349cf5ec1
-# ╠═966f82be-7fdf-44d2-9c9f-3e27c19aef89
+# ╟─ce55a015-792b-41e1-9426-e5a349cf5ec1
+# ╟─966f82be-7fdf-44d2-9c9f-3e27c19aef89
 # ╟─1fec8fd3-fc4a-4efc-9d03-16b050c22926
-# ╠═ed05bfa9-995a-422b-9ccb-215b5535723e
+# ╟─ed05bfa9-995a-422b-9ccb-215b5535723e
 # ╠═fc065401-50dc-4a21-98ad-b2ecd003d397
 # ╟─c72bb206-c7c6-4be6-8b92-446540edbea2
-# ╠═77b32e0e-fb41-4a2a-8b1d-a272e4a1dd60
-# ╠═81ffb853-ba0a-4513-b4e1-21f5c2327dc9
+# ╟─77b32e0e-fb41-4a2a-8b1d-a272e4a1dd60
+# ╟─81ffb853-ba0a-4513-b4e1-21f5c2327dc9
 # ╟─d90e2c72-9fdb-4f9e-94c8-7b211d2b16e3
-# ╠═7b64474a-bbb1-4bc2-8f87-a35e4b168545
-# ╠═137932b7-b914-47f0-b355-2406c7dfe4a4
-# ╠═5aac7456-b32f-40e8-a015-fcbea6f638ff
-# ╠═4e51fc12-7f05-49e2-b55a-7d91c47dd185
-# ╠═3b082138-5062-433b-b224-24b287851a1d
+# ╟─7b64474a-bbb1-4bc2-8f87-a35e4b168545
+# ╟─137932b7-b914-47f0-b355-2406c7dfe4a4
+# ╟─5aac7456-b32f-40e8-a015-fcbea6f638ff
+# ╟─4e51fc12-7f05-49e2-b55a-7d91c47dd185
+# ╟─85f95152-93a2-42cd-80f3-c3d7d931dbfe
+# ╠═134ac318-adb5-4939-96f7-3b70b12ffe43
+# ╠═d5b1c891-9529-4876-839f-cddd94d3d800
+# ╠═9d0fb461-46e4-4436-a367-5cdf3406474f
+# ╠═c2a34850-17eb-43ca-b6c1-262dc67d6006
+# ╠═36f08b38-d725-48fb-a44e-ebc9491fc215
+# ╠═099be731-dd16-4f56-af53-269e38ada04b
+# ╠═bcbcf050-ee5f-4531-b432-7e2006fccc1e
+# ╠═738201a6-b769-4586-81cd-c8e73c9a6ad9
+# ╠═deb5d973-3fb6-48c9-87da-ed50eb4cd33d
+# ╠═c90350c2-9c91-43df-b7ed-2ed77f960e6d
 # ╠═4a9ebc9b-b91c-4ff6-ba55-2c32093044be
-# ╠═c79562cb-0d5d-4ffe-877c-2404b817e9c1
-# ╠═f1a3bb57-8ef4-446b-82e2-9df8f79e57c8
 # ╟─70685b9d-b660-4443-ae7f-a0659456dc4f
 # ╠═1d0d28b0-30fd-4acb-bb20-18e9659f8549
 # ╠═bb38f4c1-4443-4b33-a526-b5cc653f437b
