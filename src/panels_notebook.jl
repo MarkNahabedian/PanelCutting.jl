@@ -55,6 +55,7 @@ returns the axis that is perpendicular to the specified axis.
 function other(axis::LengthAxis)::Axis
   WidthAxis()
 end
+
 function other(axis::WidthAxis)::Axis
   LengthAxis()
 end
@@ -190,14 +191,15 @@ begin
 
   function Base.getproperty(panel::FlippedPanel, prop::Symbol)
     was = getfield(panel, :was)
-    if prop == :length
-      return was.width
-    elseif prop == :width
-      return was.length
-    elseif prop in propertynames(was)
-      return getfield(was, prop)
+	@match prop begin
+		:was     => return was
+		:length  => return was.width
+		:width   => return was.length
+	end
+    if prop in propertynames(was)
+      return getproperty(was, prop)
     else
-      return getfield(panel, prop)
+      return getproperty(panel, prop)
     end
   end
 
@@ -266,6 +268,21 @@ struct AvailablePanel <: AbstractPanel
   cost
 end
 
+# ╔═╡ 4fcb103c-fca4-4bd5-8d55-018bdf73a686
+begin
+	function Base.getproperty(panel::AvailablePanel, prop::Symbol)
+		@match prop begin
+			:x  => 0u"inch"
+			:y  => 0u"inch"
+			_   => getfield(panel, prop)
+		end
+	end
+	
+	function Base.propertynames(panel::AbstractPanel, private::Bool=false)
+		(:x, :y, fieldnames(typeof(panel))...)
+	end
+end
+
 # ╔═╡ f6a43438-d7b0-442d-bb05-9e4488855665
 md"""
   ### Supplier Data
@@ -304,17 +321,14 @@ begin
     was = getfield(panel, :was)
 	@match prop begin
 		:was          =>  was
-		:x            =>  0u"inch"
-		:y            =>  0u"inch"
 		:length       =>  was.length
 		:width        =>  was.width
-	    _             =>  getfield(was, prop)
+	    _             =>  getproperty(was, prop)
     end
   end
 
   function Base.propertynames(panel::BoughtPanel, private::Bool=false)
-    (fieldnames(typeof(panel))...,
-     fieldnames(typeof(panel.was))...)
+    (:was, propertynames(panel.was)...)
   end
 
 end
@@ -724,7 +738,7 @@ end
 # ╔═╡ c2a34850-17eb-43ca-b6c1-262dc67d6006
 function panelrect(io::IO, panel::AbstractPanel, cssclass::String)
 	g(io) do
-		write(io, "<!-- $(panel.label): $(panel.width) by $(panel.length) -->\n")
+		write(io, "<!-- $(panel.label): $(panel.width) by $(panel.length), at $(panel.x), $(panel.y) -->\n")
 		rect(io; class=cssclass,
 			 x=svgdistance(panel.x),
 			 y=svgdistance(panel.y),
@@ -783,32 +797,26 @@ function toSVG(io::IO, state::SearchState)
 	vpheight = svgdistance(sum(minor.(keys(rpg))) + 2 * SVG_PANEL_MARGIN)
 	svg(io; xmlns="http://www.w3.org/2000/svg",
 		width="90%",
-		viewbox="0 0 $(vpwidth) $(vpheight)") do
+		viewBox="0 0 $(vpwidth) $(vpheight)") do
 		style(io; type="text/css") do
 			write(io, """
 			g.everything { background-color: pink; }
 			.cut { stroke-width: 1px; stroke: black; }
-			.factory-edge { stroke-width: 1px; stroke: green; fill: none; }
-			.finished { stroke: none; fill: gray; }
+			.factory-edge { stroke-width: 1px; stroke: blue; fill: none; }
+			.finished { stroke: green; fill: none; }
 			""")
 		end
 		g(io; class="everything") do
 			y = SVG_PANEL_MARGIN
 			for stock in filter((p) -> p isa BoughtPanel, keys(rpg))
-				# We might want to have the longer dimension of panel run
-				# horizontallu.  If so, we can apply a 90 degree rotation.
-				if stock.length > stock.width
-					tx = svgdistance(SVG_PANEL_MARGIN)
-					ty = svgdistance(y + stock.width)
-					transform = "rotate(90) translate($tx $ty)"
-					y += stock.width
-				else
-					tx = svgdistance(SVG_PANREL_MARGIN)
-					ty = svgdistance(y)
-					transform = "translate($tx, $ty)"
-					y += stock.length + SVG_PANEL_MARGIN
-				end
-				g(io; transform) do
+				# We want to have the longer dimension of panel run
+				# horizontally.  If so, we can apply a 90 degree rotation.
+				# Here we just translate successive stock panels (BoughtPanel)
+				# by its minor dimension and margins to space them out.
+				# The toSVG method of BoughtPanel will deal with rotation.
+				tx = svgdistance(SVG_PANEL_MARGIN)
+				ty = svgdistance(y)
+				g(io; transform="translate($(tx), $(ty))") do
 					toSVG(io, stock, rpg)
 				end
 			end
@@ -818,9 +826,15 @@ end
 
 # ╔═╡ 738201a6-b769-4586-81cd-c8e73c9a6ad9
 function toSVG(io::IO, panel::BoughtPanel, rpg::ReversePanelGraph)
-	# We might want to have the longer dimension of panel run horizontallu.
+	# We want to have the longer dimension of panel run horizontallu.
 	# If so, we can apply a 90 degree rotation.
-	g(io) do
+	transform = ""
+	if panel.length > panel.width
+		tx = svgdistance(0u"inch")
+		ty = svgdistance(panel.width)
+		transform = "rotate(90) translate($tx $ty)"
+	end
+	g(io; transform=transform) do
 		panelrect(io, panel, "factory-edge")
 		for p in rpg[panel]
 			toSVG(io, p, rpg)
@@ -900,16 +914,17 @@ collect(Iterators.flatten(((1,2,3), (4,5,6))))
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
 # ╟─60fdb133-5d21-4445-90f9-3bbe49fb743b
 # ╟─5be6a7bd-b97c-4b97-ab47-9d83b3a2dd77
-# ╟─6835fdd3-eead-4d2b-81ce-a05df4f57499
+# ╠═6835fdd3-eead-4d2b-81ce-a05df4f57499
 # ╟─1292709e-63f9-4f9f-a6c0-0e9068a4c6b6
-# ╟─98a48a7c-51e9-46f9-bdb4-e6a6b8380061
+# ╠═98a48a7c-51e9-46f9-bdb4-e6a6b8380061
 # ╟─29c94131-5b13-4588-a772-d517198d2163
 # ╟─34bab1fd-ecdc-4054-8c69-5325ae807e1f
 # ╟─7c51768d-f376-487c-a88d-f795fb01da48
 # ╟─594a5dc5-77cc-4610-8ae0-2ee54abb1d4b
 # ╟─ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─adb89a84-5223-42db-90d5-8703b2d9a3b7
-# ╟─5176ae29-b9ac-4c20-82c2-2e054a32eecc
+# ╠═5176ae29-b9ac-4c20-82c2-2e054a32eecc
+# ╠═4fcb103c-fca4-4bd5-8d55-018bdf73a686
 # ╟─f6a43438-d7b0-442d-bb05-9e4488855665
 # ╟─65adef2d-9a53-4310-81a0-5dbb6d0918ca
 # ╟─8f925530-7e76-44f7-9557-64d4629a5e39
@@ -921,12 +936,12 @@ collect(Iterators.flatten(((1,2,3), (4,5,6))))
 # ╟─fbc6012e-8893-4634-b632-1609c5a1d23a
 # ╟─63b95b10-769f-4e8c-ad7f-6f6471155c5c
 # ╟─b264c74c-1470-4a0b-a693-922dd40a1216
-# ╠═c012d7a5-6b89-455c-a4ca-7f50b507d670
+# ╟─c012d7a5-6b89-455c-a4ca-7f50b507d670
 # ╟─2fd93f59-4101-489f-b540-41d3ca48febf
 # ╟─65f4609e-5d6f-4ba6-a941-45c42ac396b4
 # ╟─b03675d3-327d-4915-9a04-c9c6bbe04924
-# ╟─ce55a015-792b-41e1-9426-e5a349cf5ec1
-# ╟─966f82be-7fdf-44d2-9c9f-3e27c19aef89
+# ╠═ce55a015-792b-41e1-9426-e5a349cf5ec1
+# ╠═966f82be-7fdf-44d2-9c9f-3e27c19aef89
 # ╟─1fec8fd3-fc4a-4efc-9d03-16b050c22926
 # ╟─ed05bfa9-995a-422b-9ccb-215b5535723e
 # ╠═fc065401-50dc-4a21-98ad-b2ecd003d397
