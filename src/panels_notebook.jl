@@ -877,7 +877,8 @@ function toSVG(io::IO, state::SearchState)
 	write(io, """          "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n""")
 	# Outermost SVG:
 	vpwidth = svgdistance(maximum(major.(keys(rpg))) + 2 * SVG_PANEL_MARGIN)
-	vpheight = svgdistance(sum(minor.(keys(rpg))) + 2 * SVG_PANEL_MARGIN)
+	vpheight = svgdistance(sum(minor.(filter(p -> p isa BoughtPanel, keys(rpg)))) + 
+		2 * SVG_PANEL_MARGIN)
 	svg(io; xmlns="http://www.w3.org/2000/svg",
 		width="90%",
 		viewBox="0 0 $(vpwidth) $(vpheight)") do
@@ -896,6 +897,7 @@ function toSVG(io::IO, state::SearchState)
 				ty = svgdistance(y)
 				g(io; transform="translate($(tx), $(ty))") do
 					toSVG(io, stock, rpg)
+				y += minor(stock) + SVG_PANEL_MARGIN
 				end
 			end
 		end
@@ -904,10 +906,10 @@ end
 
 # ╔═╡ 738201a6-b769-4586-81cd-c8e73c9a6ad9
 function toSVG(io::IO, panel::BoughtPanel, rpg::ReversePanelGraph)
-	# We want to have the longer dimension of panel run horizontallu.
-	# If so, we can apply a 90 degree rotation.
+	# We want to have the longer dimension of panel run horizontally.
+	# This is already anticipated above wnere we calculate the SVG viewBox.
 	transform = ""
-	if panel.length < panel.width
+	if panel.length != major(panel)
 		tx = svgdistance(0u"inch")
 		ty = svgdistance(panel.width)
 		transform = "rotate(90) translate($tx $ty)"
@@ -945,7 +947,7 @@ function toSVG(io::IO, panel::FinishedPanel, rpg::ReversePanelGraph)
 end
 
 # ╔═╡ 4a9ebc9b-b91c-4ff6-ba55-2c32093044be
-begin
+let
   searcher = Searcher(wanda_box_panels[1:2])
   run(searcher)
   println(searcher.finished_states)
@@ -958,6 +960,16 @@ begin
   else
     String(foo)
   end
+end
+
+# ╔═╡ aeaa6940-4f97-4286-97d4-7ad6dc6013b1
+let
+	searcher = Searcher(wanda_box_panels)
+	run(searcher)
+	buf = IOBuffer()
+	toSVG(buf, searcher.cheapest)
+	foo = take!(buf)
+	DisplayAs.SVG(Drawing(foo))
 end
 
 # ╔═╡ 70685b9d-b660-4443-ae7f-a0659456dc4f
@@ -1033,6 +1045,7 @@ end
 # ╠═deb5d973-3fb6-48c9-87da-ed50eb4cd33d
 # ╠═c90350c2-9c91-43df-b7ed-2ed77f960e6d
 # ╠═4a9ebc9b-b91c-4ff6-ba55-2c32093044be
+# ╠═aeaa6940-4f97-4286-97d4-7ad6dc6013b1
 # ╟─70685b9d-b660-4443-ae7f-a0659456dc4f
 # ╠═1d0d28b0-30fd-4acb-bb20-18e9659f8549
 # ╠═bb38f4c1-4443-4b33-a526-b5cc653f437b
