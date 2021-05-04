@@ -60,10 +60,24 @@ function other(axis::WidthAxis)::Axis
   LengthAxis()
 end
 
+  function moveby(x, y, axis::LengthAxis, distance)
+    (x + distance, y)
+  end
+
+  function moveby(x, y, axis::WidthAxis, distance)
+    (x, y + distance)
+  end
+
+  const zerozero = (0u"inch", 0u"inch")
+
 @assert LengthAxis() isa Axis
 @assert WidthAxis() isa Axis
 @assert other(WidthAxis()) == LengthAxis()
 @assert other(LengthAxis()) == WidthAxis()
+
+@assert moveby(zerozero..., LengthAxis(), 10u"inch") == (10u"inch", 0u"inch")
+@assert moveby(zerozero..., WidthAxis(), 10u"inch") == (0u"inch", 10u"inch")
+
 end
 
 
@@ -111,15 +125,16 @@ begin
   end
 
   function distance(panel::AbstractPanel, axis::LengthAxis)
-    return panel.length
+   panel.length
   end
-
-  function moveby(x, y, axis::LengthAxis, distance)
-    return (x + distance, y)
-  end
-
-  function moveby(x, y, axis::WidthAxis, distance)
-    return (x, y + distance)
+	
+  """
+  Return newX and newY so long as they are not 0.
+  If zero, use the corresponding default value.
+  """
+  function replace0(defaultX, defaultY, newX, newY)
+		((newX == zero(newX) ? defaultX : newX),
+		 (newY == zero(newY) ? defaultY : newY))
   end
 	
 """
@@ -447,42 +462,82 @@ md"""
   """
 
 # ╔═╡ ce55a015-792b-41e1-9426-e5a349cf5ec1
-begin
-  function cut(panel::CuttablePanel,
-               axis::LengthAxis,
-               at::LengthType)::Union{Nothing,
-                                      Tuple{Panel, Panel}}
-    if panel.length < at
-      return nothing
-    end
-    remnant = panel.length - at - KERF
-    cost = (panel.cost + COST_PER_CUT) / 2
-    (Panel(at, panel.width, panel, at, axis,
-           panel.x, panel.y,
-	   cost),
-     Panel(remnant, panel.width, panel, at, axis,
-           panel.x + at + KERF,
-           panel.y,
-	   cost))
-  end
+"""
+    cut(panel, axis, at)::(panel1, panel2)
 
-  function cut(panel::CuttablePanel,
-               axis::WidthAxis,
-               at::LengthType)::Union{Nothing,
-                                      Tuple{Panel, Panel}}
-    if panel.width < at
-      return nothing
-    end
-    remnant = panel.width - at - KERF
-    cost = (panel.cost + COST_PER_CUT) / 2
-    (Panel(panel.length, at, panel, at, axis,
-           panel.x, panel.y,
-	   cost),
-     Panel(panel.length, remnant, panel, at, axis,
-           panel.x,
-           panel.y + at + KERF,
-	   cost))
+Cut panel at the specified distance along axis.
+The first returned panel is the piece cut to that distance.
+The second is what remains (accounting for kerf).
+
+nothing is returned if the cut can't be made.
+
+# Examples
+```jldoctest
+julia> panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20))
+...
+julia> panel2, panel3 = cut(panel1, LengthAxis(), 25u"inch")
+...
+julia> panel2.length == 25u"inch"
+true
+julia> panel2.width == 30u"inch"
+true
+julia> panel3.length == panel1.length - panel2.length - KERF
+true
+julia> panel3.width == 30u"inch"
+true
+julia panel2.x == panel1.x
+true
+julia> panel2.y == panel1.y
+true
+julia> panel3.x == panel1.x + panel2.length + KERF
+true
+julia> panel3.y == panel1.y
+true
+``````
+"""  
+function cut(panel::CuttablePanel,
+             axis::Axis,
+             at::LengthType)::Union{Nothing,
+                                    Tuple{Panel, Panel}}
+  if distance(panel, axis) < at
+    return nothing
   end
+  cost = (panel.cost + COST_PER_CUT) / 2
+  p2xy = moveby(panel.x, panel.y, axis, at + KERF)
+  (Panel(replace0(panel.length, panel.width,
+		  moveby(zerozero..., axis, at)...)...,
+         panel, at, axis, panel.x, panel.y,
+	 cost),
+   Panel(panel.length - p2xy[1], panel.width - p2xy[2],
+         panel, at, axis, p2xy...,
+	 cost))
+end
+
+# ╔═╡ 952a3952-7632-4355-beea-ab064d4b374d
+begin
+  panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20))
+
+  # Cut panel1 at 25" down LengthAxis:
+  panel2, panel3 = cut(panel1, LengthAxis(), 25u"inch")
+  @assert panel2.length == 25u"inch"  """got $(panel2.length), expected $(25u"inch")"""
+  @assert panel2.width == 30u"inch"
+  @assert panel3.length == panel1.length - panel2.length - KERF
+  @assert panel3.width == 30u"inch"
+  @assert panel2.x == panel1.x   "panel2.x: got $(panel2.x), expected $(panel1.x)"
+  @assert panel2.y == panel1.y
+  @assert panel3.x == panel1.x + panel2.length + KERF
+  @assert panel3.y == panel1.y
+	
+  # Cut panel2 at 10" down WidthAxis:
+  panel4, panel5 = cut(panel2, WidthAxis(), 10u"inch")
+  @assert panel4.width == 10u"inch"
+  @assert panel4.length == panel2.length
+  @assert panel4.x == panel2.x
+  @assert panel4.y == panel2.y
+  @assert panel5.x == panel2.x
+  @assert panel5.y == panel4.y + panel4.width + KERF
+  @assert panel5.length == panel2.length
+  @assert panel5.width == panel2.width - panel4.width - KERF
 end
 
 # ╔═╡ 966f82be-7fdf-44d2-9c9f-3e27c19aef89
@@ -490,10 +545,10 @@ begin
   local panel1 = BoughtPanel(AVAILABLE_PANELS[1])
   local at = 22u"inch"
   cut1, cut2 = cut(panel1, LengthAxis(), at)
-  @assert cut1.length == at
-  @assert cut1.width == panel1.width
-  @assert cut2.width == panel1.width
-  @assert cut2.length == panel1.length - at - KERF
+  @assert cut1.length == at  "got $(cut1.length), expected $(at)"
+  @assert cut1.width == panel1.width  "got $(cut1.width), expected $(panel1.width)"
+  @assert cut2.width == panel1.width  "got $(cut2.width), expected $(panel1.width)"
+  @assert cut2.length == panel1.length - at - KERF "got $(cut2.length), expected $(panel1.length - at - KERF)"
 end
 
 # ╔═╡ 1fec8fd3-fc4a-4efc-9d03-16b050c22926
@@ -737,13 +792,17 @@ end
 
 # ╔═╡ c2a34850-17eb-43ca-b6c1-262dc67d6006
 function panelrect(io::IO, panel::AbstractPanel, cssclass::String)
+	# It's confusing that panel.width corresponds to SVG length
+	# and panel.length corresponds to SVG width.  Sorry.
+	# This is a consequence of the x and y coordinaces of a panel
+	# corresponding with the panel's length and width respectively.
 	g(io) do
 		write(io, "<!-- $(panel.label): $(panel.width) by $(panel.length), at $(panel.x), $(panel.y) -->\n")
 		rect(io; class=cssclass,
 			 x=svgdistance(panel.x),
 			 y=svgdistance(panel.y),
-			 width=svgdistance(panel.width),
-			 height=svgdistance(panel.length))
+			 width=svgdistance(panel.length),
+			 height=svgdistance(panel.width))
 	end
 end
 
@@ -885,30 +944,6 @@ end
 # ╔═╡ bb38f4c1-4443-4b33-a526-b5cc653f437b
 +(area.(Set(wanda_box_panels))...)
 
-# ╔═╡ b5c18d07-f61f-4167-86cd-2ccb9e283425
-subtypes(Axis)
-
-# ╔═╡ 74502de0-5b60-44e3-8bcf-3ad5d6fbcba2
-LengthAxis()
-
-# ╔═╡ f9519d09-57a3-41db-bf43-55d45e5e2584
-Set(Iterators.flatten((1, (2, 3, 4), 5, (6, (7, 8)))))
-
-# ╔═╡ 1ee711b3-c80b-434d-bccc-ec9768f3af5b
-WantedPanel <: AbstractWantedPanel
-
-# ╔═╡ 3f14900a-09f5-4a35-888a-af3491347033
-Vector{WantedPanel} <: Vector{AbstractWantedPanel}
-
-# ╔═╡ b127a88a-00ed-44e6-b829-4858e8bc35da
-Vector{AbstractWantedPanel} <: Vector{WantedPanel}
-
-# ╔═╡ 0b876d62-97a4-4952-adbc-6147ebd8dbb8
-cat([1, 2, 3], [4, 5, 6]; dims=[1])
-
-# ╔═╡ 0174ad76-753f-4367-879b-d3fb6f563184
-collect(Iterators.flatten(((1,2,3), (4,5,6))))
-
 # ╔═╡ Cell order:
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
@@ -923,8 +958,8 @@ collect(Iterators.flatten(((1,2,3), (4,5,6))))
 # ╟─594a5dc5-77cc-4610-8ae0-2ee54abb1d4b
 # ╟─ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─adb89a84-5223-42db-90d5-8703b2d9a3b7
-# ╠═5176ae29-b9ac-4c20-82c2-2e054a32eecc
-# ╠═4fcb103c-fca4-4bd5-8d55-018bdf73a686
+# ╟─5176ae29-b9ac-4c20-82c2-2e054a32eecc
+# ╟─4fcb103c-fca4-4bd5-8d55-018bdf73a686
 # ╟─f6a43438-d7b0-442d-bb05-9e4488855665
 # ╟─65adef2d-9a53-4310-81a0-5dbb6d0918ca
 # ╟─8f925530-7e76-44f7-9557-64d4629a5e39
@@ -941,7 +976,8 @@ collect(Iterators.flatten(((1,2,3), (4,5,6))))
 # ╟─65f4609e-5d6f-4ba6-a941-45c42ac396b4
 # ╟─b03675d3-327d-4915-9a04-c9c6bbe04924
 # ╠═ce55a015-792b-41e1-9426-e5a349cf5ec1
-# ╠═966f82be-7fdf-44d2-9c9f-3e27c19aef89
+# ╠═952a3952-7632-4355-beea-ab064d4b374d
+# ╟─966f82be-7fdf-44d2-9c9f-3e27c19aef89
 # ╟─1fec8fd3-fc4a-4efc-9d03-16b050c22926
 # ╟─ed05bfa9-995a-422b-9ccb-215b5535723e
 # ╠═fc065401-50dc-4a21-98ad-b2ecd003d397
@@ -968,11 +1004,3 @@ collect(Iterators.flatten(((1,2,3), (4,5,6))))
 # ╟─70685b9d-b660-4443-ae7f-a0659456dc4f
 # ╠═1d0d28b0-30fd-4acb-bb20-18e9659f8549
 # ╠═bb38f4c1-4443-4b33-a526-b5cc653f437b
-# ╠═b5c18d07-f61f-4167-86cd-2ccb9e283425
-# ╠═74502de0-5b60-44e3-8bcf-3ad5d6fbcba2
-# ╠═f9519d09-57a3-41db-bf43-55d45e5e2584
-# ╠═1ee711b3-c80b-434d-bccc-ec9768f3af5b
-# ╠═3f14900a-09f5-4a35-888a-af3491347033
-# ╠═b127a88a-00ed-44e6-b829-4858e8bc35da
-# ╠═0b876d62-97a4-4952-adbc-6147ebd8dbb8
-# ╠═0174ad76-753f-4367-879b-d3fb6f563184
