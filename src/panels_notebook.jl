@@ -12,6 +12,7 @@ begin
   using DataStructures
   # using UnitfulCurrency   # trounble loading UnitfulCurrency
   using NativeSVG
+  using DisplayAs
 end
 
 # ╔═╡ 60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
@@ -952,8 +953,8 @@ begin
   buf = IOBuffer()
   toSVG(buf, searcher.cheapest)
   foo = take!(buf)
-  if false
-	Drawing(foo)
+  if true
+	DisplayAs.SVG(Drawing(foo))
   else
     String(foo)
   end
