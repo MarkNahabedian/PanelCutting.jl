@@ -888,7 +888,7 @@ function toSVG(io::IO, panel::BoughtPanel, rpg::ReversePanelGraph)
 	# We want to have the longer dimension of panel run horizontallu.
 	# If so, we can apply a 90 degree rotation.
 	transform = ""
-	if panel.length > panel.width
+	if panel.length < panel.width
 		tx = svgdistance(0u"inch")
 		ty = svgdistance(panel.width)
 		transform = "rotate(90) translate($tx $ty)"
