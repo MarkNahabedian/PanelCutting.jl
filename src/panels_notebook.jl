@@ -766,6 +766,29 @@ md"""
 # Describing the Cuts using SVG
 """
 
+# ╔═╡ 2e1e9fc8-6209-4968-bf7e-fa97b72ebef3
+const STYLESHEET = """
+  g.everything {
+    background-color: pink;
+  }
+  g.everything * { 
+    vector-effect: non-scaling-stroke;
+  }
+  .cut {
+    stroke-width: 1px;
+    stroke: rgb(0%,50%, 50%);
+    stroke-dasharray: 4 4;
+  }
+  .factory-edge {
+    stroke-width: 1px; stroke: blue;
+    fill: none;
+  }
+  .finished {
+    stroke: none;
+    fill: rgba(0%, 50%, 0%, 50%);
+  }
+"""
+
 # ╔═╡ 134ac318-adb5-4939-96f7-3b70b12ffe43
 macro thismodule()
 	:($__module__)
@@ -858,12 +881,7 @@ function toSVG(io::IO, state::SearchState)
 		width="90%",
 		viewBox="0 0 $(vpwidth) $(vpheight)") do
 		style(io; type="text/css") do
-			write(io, """
-			g.everything { background-color: pink; }
-			.cut { stroke-width: 1px; stroke: black; }
-			.factory-edge { stroke-width: 1px; stroke: blue; fill: none; }
-			.finished { stroke: green; fill: none; }
-			""")
+		  write(io, STYLESHEET)
 		end
 		g(io; class="everything") do
 			y = SVG_PANEL_MARGIN
@@ -906,6 +924,18 @@ function toSVG(io::IO, panel::Panel, rpg::ReversePanelGraph)
 	for p in rpg[panel]
 		toSVG(io, p, rpg)
 	end
+	endX = panel.x + panel.length
+	endY = panel.y + panel.width
+	if panel.cut_axis isa LengthAxis
+		startX = endX
+		startY = panel.y
+	else
+		startX = panel.x
+		startY = endY
+	end
+	startX, startY, endX, endY = svgdistance.((startX, startY, endX, endY))
+	d = "M $startX $startY L $endX $endY"
+	NativeSVG.path(io; class="cut", d=d)
 end
 
 # ╔═╡ c90350c2-9c91-43df-b7ed-2ed77f960e6d
@@ -990,6 +1020,7 @@ end
 # ╟─5aac7456-b32f-40e8-a015-fcbea6f638ff
 # ╟─4e51fc12-7f05-49e2-b55a-7d91c47dd185
 # ╟─85f95152-93a2-42cd-80f3-c3d7d931dbfe
+# ╠═2e1e9fc8-6209-4968-bf7e-fa97b72ebef3
 # ╠═134ac318-adb5-4939-96f7-3b70b12ffe43
 # ╠═d5b1c891-9529-4876-839f-cddd94d3d800
 # ╠═9d0fb461-46e4-4436-a367-5cdf3406474f
