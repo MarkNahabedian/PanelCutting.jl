@@ -1,5 +1,5 @@
 module PanelCutting
 
-# Write your package code here.
+  include("./panels_notebook.jl")
 
 end
