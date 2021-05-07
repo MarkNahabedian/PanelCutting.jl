@@ -22,6 +22,44 @@ md"""
   Prefer inches.
   """
 
+# ╔═╡ 1871abc7-d4cb-4ebd-862e-660a9ce5dc56
+begin
+
+  struct AllOf
+    length::Int
+    lengths
+    iterables
+    
+    function AllOf(iterables...)
+      lengths = length.(iterables)
+      new(sum(lengths), lengths, iterables)
+    end
+  end
+  
+  function Base.length(x::AllOf)::Int
+    x.length
+  end
+
+  Base.firstindex(x::AllOf) = 1
+
+  Base.lastindex(x::AllOf) = x.length
+
+  function Base.getindex(x::AllOf, index::Int)
+	if index < 1
+	  throw(BoundsError(x, index))
+	end
+	idx = index
+    for i in 1:length(x.lengths)
+      if idx <= x.lengths[i]
+        return x.iterables[i][idx]
+      end
+      idx -= x.lengths[i]
+    end
+	throw(BoundsError(x, index))
+  end
+
+end
+
 # ╔═╡ 60fdb133-5d21-4445-90f9-3bbe49fb743b
 begin
   Unitful.preferunits(u"inch")
@@ -457,6 +495,73 @@ begin
   Panels{T} = Tuple{Vararg{T}}
 end
 
+# ╔═╡ c63390d5-1e04-44c0-8842-df2b07d8767b
+md"""
+  ## Testing if Panels Overlap
+  """
+
+# ╔═╡ e0247c8e-c10f-44f8-af9b-3fd3a0b921ed
+# Spans
+begin
+	abstract type Span end
+
+  struct XSpan <: Span
+    c1
+    c2
+    
+    function XSpan(panel::AbstractPanel)
+      new(panel.x, panel.x + panel.length)
+    end
+  end
+
+  struct YSpan <: Span
+    c1
+    c2
+    
+    function YSpan(panel::AbstractPanel)
+      new(panel.y, panel.y + panel.width)
+    end
+  end
+
+  function within(c, s::Span)::Bool
+    c >= s.c1 && c <= s.c2
+  end
+
+  function overlap(s1::T, s2::T)::Bool where T <: Span
+    within(s1.c1, s2) ||
+      within(s1.c2, s2) ||
+      within(s2.c1, s1) ||
+      within(s2.c2, s1)
+  end
+
+  function overlap(panel1::AbstractPanel, panel2::AbstractPanel)::Bool
+    panel1 !== panel2 &&
+      overlap(XSpan(panel1), XSpan(panel2)) &&
+      overlap(YSpan(panel1), YSpan(panel2))
+  end
+
+  function operlap(panel::AbstractPanel, panels::Panels)::Bool
+    for p in panels
+      if operlap(panel, p)
+        return true
+      end
+    end
+    return false
+  end
+
+  function overlap(panels::Panels, morepanels::Panels...)::Bool
+    for p in panels
+      for panels in morepanels
+        if overlap(p, panels)
+          return true
+        end
+      end
+    end
+    return false
+  end
+
+end
+
 # ╔═╡ b03675d3-327d-4915-9a04-c9c6bbe04924
 md"""
   # Cutting
@@ -573,6 +678,13 @@ begin
                          scrapped=Panels{ScrappedPanel}([]),
                          working=Panels{CuttablePanel}([]),
                          accumulated_cost=0)
+	  panels = AllOf(finished, scrapped, working)
+	  for i in 1:length(panels)
+		for j in i+1:length(panels)
+		  @assert !overlap(panels[i], panels[j])  (
+				  "Overlap:\n$(panels[i])\n$(panels[j])")
+		end
+	  end
       new(wanted, finished, scrapped, working, accumulated_cost)
     end
   end
@@ -613,7 +725,9 @@ begin
 		        finished=if finished == nothing
                           precursor.finished
                         else
-                          Panels{FinishedPanel}(union((finished,), precursor.finished))
+                          Panels{FinishedPanel}(
+			    union((finished,),
+				  precursor.finished))
                         end,
 		        scrapped=Panels{ScrappedPanel}(
 			  union(newlyscrapped, precursor.scrapped)),
@@ -770,7 +884,6 @@ md"""
 # ╔═╡ 2e1e9fc8-6209-4968-bf7e-fa97b72ebef3
 const STYLESHEET = """
   g.everything {
-    background-color: pink;
   }
   g.everything * { 
     vector-effect: non-scaling-stroke;
@@ -791,9 +904,11 @@ const STYLESHEET = """
 """
 
 # ╔═╡ 134ac318-adb5-4939-96f7-3b70b12ffe43
+#=
 macro thismodule()
 	:($__module__)
 end
+=#
 
 # ╔═╡ d5b1c891-9529-4876-839f-cddd94d3d800
 #= this macro does not play well with Pluto notebooks
@@ -821,7 +936,9 @@ function panelrect(io::IO, panel::AbstractPanel, cssclass::String)
 	# This is a consequence of the x and y coordinaces of a panel
 	# corresponding with the panel's length and width respectively.
 	g(io) do
-		write(io, "<!-- $(panel.label): $(panel.width) by $(panel.length), at $(panel.x), $(panel.y) -->\n")
+		write(io, string("<!-- $(panel.label): ",
+				 "$(panel.width) by $(panel.length), ",
+				 "at $(panel.x), $(panel.y) -->\n"))
 		rect(io; class=cssclass,
 			 x=svgdistance(panel.x),
 			 y=svgdistance(panel.y),
@@ -834,43 +951,52 @@ end
 begin
 	#= AbstractPanels are related to one another through a directed graph
 	based on various relations.  Here we construct the inverse directed graph,
-	which could be one to many.
+	which could be one-to-many, as a Dict.
 	=#
-	ReversePanelGraph = Dict{AbstractPanel, Vector{AbstractPanel}}
+	ReversePanelGraph = DefaultDict{AbstractPanel, Set{AbstractPanel}}
 	
 	function note!(g::ReversePanelGraph, key::AbstractPanel, add::AbstractPanel)
-		push!(get!(g, key, Vector{AbstractPanel}()), add)
+		push!(g[key], add)
+	end
+
+	function makeReversePanelGraph(panel::AbstractPanel,
+				                   rpg::ReversePanelGraph)
+		return rpg
 	end
 
 	function makeReversePanelGraph(state::SearchState)::ReversePanelGraph
-		d = ReversePanelGraph()
+		rpg = ReversePanelGraph(() -> Set{AbstractPanel}())
 		for f in state.finished
-			makeReversePanelGraph(f, d)
+			makeReversePanelGraph(f, rpg)
 		end
-		return d
-	end
-		
-	function makeReversePanelGraph(panel::AbstractPanel,
-				                   d::ReversePanelGraph)
-		return d
-	end
-		
-	function makeReversePanelGraph(panel::Panel, d::ReversePanelGraph)
-		note!(d, panel.cut_from, panel)
-		makeReversePanelGraph(panel.cut_from, d)
+		for s in state.scrapped
+			makeReversePanelGraph(s,rpg)
+		end
+		return rpg
 	end
 	
-	function makeReversePanelGraph(panel::FinishedPanel, d::ReversePanelGraph)
-		note!(d, panel.was, panel)
-		makeReversePanelGraph(panel.was, d)
+	function makeReversePanelGraph(panel::FinishedPanel, rpg::ReversePanelGraph)
+		note!(rpg, panel.was, panel)
+		makeReversePanelGraph(panel.was, rpg)
 	end
+	
+	function makeReversePanelGraph(panel::ScrappedPanel, rpg::ReversePanelGraph)
+		note!(rpg, panel.was, panel)
+		makeReversePanelGraph(panel.was, rpg)
+	end
+		
+	function makeReversePanelGraph(panel::Panel, rpg::ReversePanelGraph)
+		note!(rpg, panel.cut_from, panel)
+		makeReversePanelGraph(panel.cut_from, rpg)
+	end
+	
 end
 
 # ╔═╡ 099be731-dd16-4f56-af53-269e38ada04b
 const SVG_PANEL_MARGIN = 2u"inch"
 
 # ╔═╡ bcbcf050-ee5f-4531-b432-7e2006fccc1e
-function toSVG(io::IO, state::SearchState)
+function toSVG(io::IO, state::SearchState)::Nothing
 	rpg = makeReversePanelGraph(state)
 	write(io, """<?xml version="1.0" encoding="UTF-8"?>\n""")
 	write(io, """<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n""")
@@ -881,7 +1007,8 @@ function toSVG(io::IO, state::SearchState)
 		2 * SVG_PANEL_MARGIN)
 	svg(io; xmlns="http://www.w3.org/2000/svg",
 		width="90%",
-		viewBox="0 0 $(vpwidth) $(vpheight)") do
+		viewBox="0 0 $(vpwidth) $(vpheight)",
+		style="background-color: pink") do
 		style(io; type="text/css") do
 		  write(io, STYLESHEET)
 		end
@@ -897,15 +1024,19 @@ function toSVG(io::IO, state::SearchState)
 				ty = svgdistance(y)
 				g(io; transform="translate($(tx), $(ty))") do
 					toSVG(io, stock, rpg)
-				y += minor(stock) + SVG_PANEL_MARGIN
+					y += minor(stock) + SVG_PANEL_MARGIN
 				end
 			end
 		end
 	end
 end
 
+# ╔═╡ ffe9f05a-4348-4967-ba9d-5b0cc57dd70b
+function toSVG(io::IO, panel::AbstractPanel, rpg::ReversePanelGraph)::Nothing
+end
+
 # ╔═╡ 738201a6-b769-4586-81cd-c8e73c9a6ad9
-function toSVG(io::IO, panel::BoughtPanel, rpg::ReversePanelGraph)
+function toSVG(io::IO, panel::BoughtPanel, rpg::ReversePanelGraph)::Nothing
 	# We want to have the longer dimension of panel run horizontally.
 	# This is already anticipated above wnere we calculate the SVG viewBox.
 	transform = ""
@@ -914,7 +1045,8 @@ function toSVG(io::IO, panel::BoughtPanel, rpg::ReversePanelGraph)
 		ty = svgdistance(panel.width)
 		transform = "rotate(90) translate($tx $ty)"
 	end
-	g(io; transform=transform) do
+	g(io; class="BoughtPanel",
+		  transform=transform) do
 		panelrect(io, panel, "factory-edge")
 		for p in rpg[panel]
 			toSVG(io, p, rpg)
@@ -923,27 +1055,31 @@ function toSVG(io::IO, panel::BoughtPanel, rpg::ReversePanelGraph)
 end
 
 # ╔═╡ deb5d973-3fb6-48c9-87da-ed50eb4cd33d
-function toSVG(io::IO, panel::Panel, rpg::ReversePanelGraph)
-	for p in rpg[panel]
-		toSVG(io, p, rpg)
+function toSVG(io::IO, panel::Panel, rpg::ReversePanelGraph)::Nothing
+	g(io; class="Panel") do
+		for p in rpg[panel]
+			toSVG(io, p, rpg)
+		end
+		endX = panel.x + panel.length
+		endY = panel.y + panel.width
+		if panel.cut_axis isa LengthAxis
+			startX = endX
+			startY = panel.y
+		else
+			startX = panel.x
+			startY = endY
+		end
+		startX, startY, endX, endY = svgdistance.((startX, startY, endX, endY))
+		d = "M $startX $startY L $endX $endY"
+		NativeSVG.path(io; class="cut", d=d)
 	end
-	endX = panel.x + panel.length
-	endY = panel.y + panel.width
-	if panel.cut_axis isa LengthAxis
-		startX = endX
-		startY = panel.y
-	else
-		startX = panel.x
-		startY = endY
-	end
-	startX, startY, endX, endY = svgdistance.((startX, startY, endX, endY))
-	d = "M $startX $startY L $endX $endY"
-	NativeSVG.path(io; class="cut", d=d)
 end
 
 # ╔═╡ c90350c2-9c91-43df-b7ed-2ed77f960e6d
-function toSVG(io::IO, panel::FinishedPanel, rpg::ReversePanelGraph)
-	panelrect(io, panel, "finished")
+function toSVG(io::IO, panel::FinishedPanel, rpg::ReversePanelGraph)::Nothing
+	g(io; class="FinishedPanel") do
+		panelrect(io, panel, "finished")
+	end
 end
 
 # ╔═╡ 4a9ebc9b-b91c-4ff6-ba55-2c32093044be
@@ -966,11 +1102,33 @@ end
 let
 	searcher = Searcher(wanda_box_panels)
 	run(searcher)
+	@assert length(searcher.cheapest.finished) == length(wanda_box_panels)
+	rpg = makeReversePanelGraph(searcher.cheapest)
+	counts = []
+	for (k, v) in rpg
+		push!(counts, (length(v), k))
+	end
+	counts
+
 	buf = IOBuffer()
 	toSVG(buf, searcher.cheapest)
 	foo = take!(buf)
-	DisplayAs.SVG(Drawing(foo))
+	# DisplayAs.SVG(Drawing(foo))
+	# length(keys(rpg))
+	String(foo)
 end
+
+# ╔═╡ 97d24eee-024e-4079-948a-49245fd3c734
+function allsubtypes(t, result=Set())
+	push!(result, t)
+	for t1 in subtypes(t)
+		allsubtypes(t1, result)
+	end
+	return result
+end
+
+# ╔═╡ 52956b53-22a2-47c2-bb8d-d70ea63dcff6
+allsubtypes(AbstractPanel)
 
 # ╔═╡ 70685b9d-b660-4443-ae7f-a0659456dc4f
 md"""
@@ -988,13 +1146,14 @@ end
 +(area.(Set(wanda_box_panels))...)
 
 # ╔═╡ Cell order:
-# ╠═b019d660-9f77-11eb-1527-278a3e1b087c
+# ╟─b019d660-9f77-11eb-1527-278a3e1b087c
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
+# ╟─1871abc7-d4cb-4ebd-862e-660a9ce5dc56
 # ╟─60fdb133-5d21-4445-90f9-3bbe49fb743b
 # ╟─5be6a7bd-b97c-4b97-ab47-9d83b3a2dd77
-# ╠═6835fdd3-eead-4d2b-81ce-a05df4f57499
+# ╟─6835fdd3-eead-4d2b-81ce-a05df4f57499
 # ╟─1292709e-63f9-4f9f-a6c0-0e9068a4c6b6
-# ╠═98a48a7c-51e9-46f9-bdb4-e6a6b8380061
+# ╟─98a48a7c-51e9-46f9-bdb4-e6a6b8380061
 # ╟─29c94131-5b13-4588-a772-d517198d2163
 # ╟─34bab1fd-ecdc-4054-8c69-5325ae807e1f
 # ╟─7c51768d-f376-487c-a88d-f795fb01da48
@@ -1016,36 +1175,41 @@ end
 # ╟─b264c74c-1470-4a0b-a693-922dd40a1216
 # ╟─c012d7a5-6b89-455c-a4ca-7f50b507d670
 # ╟─2fd93f59-4101-489f-b540-41d3ca48febf
-# ╟─65f4609e-5d6f-4ba6-a941-45c42ac396b4
+# ╠═65f4609e-5d6f-4ba6-a941-45c42ac396b4
+# ╟─c63390d5-1e04-44c0-8842-df2b07d8767b
+# ╠═e0247c8e-c10f-44f8-af9b-3fd3a0b921ed
 # ╟─b03675d3-327d-4915-9a04-c9c6bbe04924
 # ╠═ce55a015-792b-41e1-9426-e5a349cf5ec1
 # ╠═952a3952-7632-4355-beea-ab064d4b374d
 # ╟─966f82be-7fdf-44d2-9c9f-3e27c19aef89
 # ╟─1fec8fd3-fc4a-4efc-9d03-16b050c22926
-# ╟─ed05bfa9-995a-422b-9ccb-215b5535723e
+# ╠═ed05bfa9-995a-422b-9ccb-215b5535723e
 # ╠═fc065401-50dc-4a21-98ad-b2ecd003d397
 # ╟─c72bb206-c7c6-4be6-8b92-446540edbea2
 # ╟─77b32e0e-fb41-4a2a-8b1d-a272e4a1dd60
 # ╟─81ffb853-ba0a-4513-b4e1-21f5c2327dc9
 # ╟─d90e2c72-9fdb-4f9e-94c8-7b211d2b16e3
-# ╟─7b64474a-bbb1-4bc2-8f87-a35e4b168545
-# ╟─137932b7-b914-47f0-b355-2406c7dfe4a4
-# ╟─5aac7456-b32f-40e8-a015-fcbea6f638ff
-# ╟─4e51fc12-7f05-49e2-b55a-7d91c47dd185
+# ╠═7b64474a-bbb1-4bc2-8f87-a35e4b168545
+# ╠═137932b7-b914-47f0-b355-2406c7dfe4a4
+# ╠═5aac7456-b32f-40e8-a015-fcbea6f638ff
+# ╠═4e51fc12-7f05-49e2-b55a-7d91c47dd185
 # ╟─85f95152-93a2-42cd-80f3-c3d7d931dbfe
 # ╠═2e1e9fc8-6209-4968-bf7e-fa97b72ebef3
-# ╠═134ac318-adb5-4939-96f7-3b70b12ffe43
+# ╟─134ac318-adb5-4939-96f7-3b70b12ffe43
 # ╠═d5b1c891-9529-4876-839f-cddd94d3d800
 # ╠═9d0fb461-46e4-4436-a367-5cdf3406474f
 # ╠═c2a34850-17eb-43ca-b6c1-262dc67d6006
 # ╠═36f08b38-d725-48fb-a44e-ebc9491fc215
 # ╠═099be731-dd16-4f56-af53-269e38ada04b
 # ╠═bcbcf050-ee5f-4531-b432-7e2006fccc1e
+# ╠═ffe9f05a-4348-4967-ba9d-5b0cc57dd70b
 # ╠═738201a6-b769-4586-81cd-c8e73c9a6ad9
 # ╠═deb5d973-3fb6-48c9-87da-ed50eb4cd33d
 # ╠═c90350c2-9c91-43df-b7ed-2ed77f960e6d
 # ╠═4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 # ╠═aeaa6940-4f97-4286-97d4-7ad6dc6013b1
+# ╠═97d24eee-024e-4079-948a-49245fd3c734
+# ╠═52956b53-22a2-47c2-bb8d-d70ea63dcff6
 # ╟─70685b9d-b660-4443-ae7f-a0659456dc4f
 # ╠═1d0d28b0-30fd-4acb-bb20-18e9659f8549
 # ╠═bb38f4c1-4443-4b33-a526-b5cc653f437b
