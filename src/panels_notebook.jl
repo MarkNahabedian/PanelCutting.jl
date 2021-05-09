@@ -253,7 +253,7 @@ begin
     if prop in propertynames(was)
       return getproperty(was, prop)
     else
-      return getproperty(panel, prop)
+      return getfield(panel, prop)
     end
   end
 
@@ -562,6 +562,10 @@ begin
 
 end
 
+# ╔═╡ a7403050-4bbd-4f0b-9dd7-3dcfa06e43db
+# Why we need to add unique ids to all panels:
+@assert !(BoughtPanel(AVAILABLE_PANELS[1]) === BoughtPanel(AVAILABLE_PANELS[1]))
+
 # ╔═╡ b03675d3-327d-4915-9a04-c9c6bbe04924
 md"""
   # Cutting
@@ -575,7 +579,7 @@ Cut panel at the specified distance along axis.
 The first returned panel is the piece cut to that distance.
 The second is what remains (accounting for kerf).
 
-nothing is returned if the cut can't be made.
+An empty Tuple is returned if the cut can't be made.
 
 # Examples
 ```jldoctest
@@ -603,20 +607,27 @@ true
 """  
 function cut(panel::CuttablePanel,
              axis::Axis,
-             at::LengthType)::Union{Nothing,
+             at::LengthType)::Union{Nothing, Tuple{Panel},
                                     Tuple{Panel, Panel}}
   if distance(panel, axis) < at
-    return nothing
+    return (())
   end
   cost = (panel.cost + COST_PER_CUT) / 2
   p2xy = moveby(panel.x, panel.y, axis, at + KERF)
-  (Panel(replace0(panel.length, panel.width,
-		  moveby(zerozero..., axis, at)...)...,
-         panel, at, axis, panel.x, panel.y,
-	 cost),
-   Panel(panel.length - p2xy[1], panel.width - p2xy[2],
-         panel, at, axis, p2xy...,
-	 cost))
+  panel1 = Panel(replace0(panel.length, panel.width,
+		 	  moveby(zerozero..., axis, at)...)...,
+                 panel, at, axis, panel.x, panel.y,
+	         cost)
+  panel2l = panel.length - p2xy[1]
+  panel2w = panel.width - p2xy[2]
+  if panel2l > 0u"inch" && panel2w > 0u"inch"
+    (panel1,
+     Panel(panel2l, panel2w,
+           panel, at, axis, p2xy...,
+	   cost))
+  else
+    (panel1,)
+  end
 end
 
 # ╔═╡ 952a3952-7632-4355-beea-ab064d4b374d
@@ -842,7 +853,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
     for axis_ in subtypes(Axis)
       axis = axis_()
       cuts = cut(working, axis, distance(wanted, axis))
-      if cuts == nothing
+      if length(cuts) == 0
 	continue
       end
       @assert distance(cuts[1], axis) == distance(wanted, axis)
@@ -854,7 +865,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
 	continue
       end
       cuts2 = cut(cuts[1], other(axis), distance(wanted, other(axis)))
-      if cuts2 == nothing
+      if length(cuts2) == 0
 	continue
       end
       @assert distance(cuts2[1], other(axis)) == distance(wanted, other(axis))
@@ -866,7 +877,6 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
   end
   return nothing
 end
-
 
 # ╔═╡ 5aac7456-b32f-40e8-a015-fcbea6f638ff
 function run(searcher::Searcher)
@@ -1153,9 +1163,9 @@ end
 # ╟─5be6a7bd-b97c-4b97-ab47-9d83b3a2dd77
 # ╟─6835fdd3-eead-4d2b-81ce-a05df4f57499
 # ╟─1292709e-63f9-4f9f-a6c0-0e9068a4c6b6
-# ╟─98a48a7c-51e9-46f9-bdb4-e6a6b8380061
+# ╠═98a48a7c-51e9-46f9-bdb4-e6a6b8380061
 # ╟─29c94131-5b13-4588-a772-d517198d2163
-# ╟─34bab1fd-ecdc-4054-8c69-5325ae807e1f
+# ╠═34bab1fd-ecdc-4054-8c69-5325ae807e1f
 # ╟─7c51768d-f376-487c-a88d-f795fb01da48
 # ╟─594a5dc5-77cc-4610-8ae0-2ee54abb1d4b
 # ╟─ecacafd3-5f70-41d9-b6cd-6b4893186b2a
@@ -1167,7 +1177,7 @@ end
 # ╟─8f925530-7e76-44f7-9557-64d4629a5e39
 # ╟─235e25dc-7139-4a24-861b-a0e7451a45eb
 # ╟─61e200af-6d6a-48c0-98e5-41b98dc2de9c
-# ╟─89b2a4cc-de85-41d0-b91d-44600fb39fe6
+# ╠═89b2a4cc-de85-41d0-b91d-44600fb39fe6
 # ╟─41a5afbb-146a-407e-836e-299d80d7c55d
 # ╟─702afb66-eb60-4d13-84ff-d8eccd9e173c
 # ╟─fbc6012e-8893-4634-b632-1609c5a1d23a
@@ -1178,6 +1188,7 @@ end
 # ╠═65f4609e-5d6f-4ba6-a941-45c42ac396b4
 # ╟─c63390d5-1e04-44c0-8842-df2b07d8767b
 # ╠═e0247c8e-c10f-44f8-af9b-3fd3a0b921ed
+# ╠═a7403050-4bbd-4f0b-9dd7-3dcfa06e43db
 # ╟─b03675d3-327d-4915-9a04-c9c6bbe04924
 # ╠═ce55a015-792b-41e1-9426-e5a349cf5ec1
 # ╠═952a3952-7632-4355-beea-ab064d4b374d
