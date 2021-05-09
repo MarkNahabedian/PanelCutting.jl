@@ -265,21 +265,9 @@ begin
   function flipped(panel::WantedPanel)  #  ::(::WantedPanel, ::FlippedPanel)
     return (panel, FlippedPanel(panel))
   end
-  
-  function wantsmatch(w1::WantedPanel, w2::WantedPanel)
-    w1 == w2
-  end
-  
-  function wantsmatch(f1::FlippedPanel, f2::FlippedPanel)
-    f1 == f2
-  end
-
-  function wantsmatch(w::WantedPanel, f::FlippedPanel)::Bool
-    f.was == w
-  end
-
-  function wantsmatch(f::FlippedPanel, w::WantedPanel)::Bool
-    f.was == w
+	
+  function wantsmatch(p1::AbstractWantedPanel, p2::AbstractWantedPanel)::Bool
+	p1.length == p2.length && p1.width == p2.width
   end
 
   # Testing
@@ -289,8 +277,9 @@ begin
     @assert w.width == f.length
     @assert w.label == f.label
     @assert setdiff(Set(propertynames(f)), Set(propertynames(w))) == Set((:was,))
-    @assert wantsmatch(w, f)
-    @assert wantsmatch(f, w)
+    @assert wantsmatch(w, w)
+    @assert wantsmatch(f, f)
+	@assert !wantsmatch(w, f)
   end
 end
 
@@ -1167,8 +1156,8 @@ end
 # ╟─29c94131-5b13-4588-a772-d517198d2163
 # ╠═34bab1fd-ecdc-4054-8c69-5325ae807e1f
 # ╟─7c51768d-f376-487c-a88d-f795fb01da48
-# ╟─594a5dc5-77cc-4610-8ae0-2ee54abb1d4b
-# ╟─ecacafd3-5f70-41d9-b6cd-6b4893186b2a
+# ╠═594a5dc5-77cc-4610-8ae0-2ee54abb1d4b
+# ╠═ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─adb89a84-5223-42db-90d5-8703b2d9a3b7
 # ╟─5176ae29-b9ac-4c20-82c2-2e054a32eecc
 # ╟─4fcb103c-fca4-4bd5-8d55-018bdf73a686
