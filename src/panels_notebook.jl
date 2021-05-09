@@ -58,6 +58,22 @@ begin
 	throw(BoundsError(x, index))
   end
 
+md"""
+    panelUID()
+Generate a unique identifier for each panel when it is created.
+We do this because Julia does not have a notion of equality that
+distibguishes between two separately created immutable structs
+with the same contents
+"""
+let
+  local nextID = 1
+  global function panelUID()::Int
+	i = nextID
+	nextID += 1
+	return i
+  end
+end
+
 end
 
 # ╔═╡ 60fdb133-5d21-4445-90f9-3bbe49fb743b
@@ -216,6 +232,7 @@ md"""
         specifies a Panel we're trying to make.
         """
 @Base.kwdef struct WantedPanel <: AbstractWantedPanel
+  uid::Int = panelUID()
   length::LengthType
   width::LengthType
   label
@@ -240,8 +257,13 @@ begin
 	      even if its length and width are swapped.
           """
   @Base.kwdef struct FlippedPanel <: AbstractWantedPanel
+	uid::Int = panelUID()
     was::WantedPanel
   end
+	
+  function FlippedPanel(was::WantedPanel)
+	FlippedPanel(; was=was)
+	end
 
   function Base.getproperty(panel::FlippedPanel, prop::Symbol)
     was = getfield(panel, :was)
@@ -272,7 +294,7 @@ begin
 
   # Testing
   let
-    w, f = flipped(WantedPanel(1u"inch", 2u"inch", "foo"))
+    w, f = flipped(WantedPanel(width=1u"inch", length=2u"inch", label="foo"))
     @assert w.length == f.width
     @assert w.width == f.length
     @assert w.label == f.label
@@ -286,11 +308,11 @@ end
 # ╔═╡ ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 begin
   wanda_box_panels = [
-    WantedPanel(25u"inch", 30u"inch", "back")
-    WantedPanel(25u"inch", 22u"inch", "right side")
-    WantedPanel(25u"inch", 22u"inch", "left side")
-    WantedPanel(22u"inch", 30u"inch", "top")
-    WantedPanel(22u"inch", 30u"inch", "bottom")
+    WantedPanel(length=25u"inch", width=30u"inch", label="back")
+    WantedPanel(length=25u"inch", width=22u"inch", label="right side")
+    WantedPanel(length=25u"inch", width=22u"inch", label="left side")
+    WantedPanel(length=22u"inch", width=30u"inch", label="top")
+    WantedPanel(length=22u"inch", width=30u"inch", label="bottom")
   ]
   sort(wanda_box_panels; lt=smaller, rev=true)
 end
@@ -301,14 +323,22 @@ md"""
   """
 
 # ╔═╡ 5176ae29-b9ac-4c20-82c2-2e054a32eecc
-"""
+begin
+	md"""
   A sheet of plywood we can buy frm the lumber yard.
   """
 @Base.kwdef struct AvailablePanel <: AbstractPanel
+  uid::Int = panelUID()
   label::String
   width::LengthType
   length::LengthType
   cost
+end
+	
+function AvailablePanel(label::String, width::LengthType, length::LengthType, cost)
+  AvailablePanel(label=label, width=width, length=length, cost=cost)
+end
+		
 end
 
 # ╔═╡ 4fcb103c-fca4-4bd5-8d55-018bdf73a686
@@ -357,7 +387,12 @@ a BoughtPanel is created to wrap an AvailablePanel when we add it to the working
 # ╔═╡ 235e25dc-7139-4a24-861b-a0e7451a45eb
 begin
   @Base.kwdef struct BoughtPanel <: CuttablePanel
+	uid::Int = panelUID()
 	was::AvailablePanel
+  end
+	
+  function BoughtPanel(was::AvailablePanel)
+	BoughtPanel(; was=was)
   end
 
   function Base.getproperty(panel::BoughtPanel, prop::Symbol)
@@ -388,6 +423,7 @@ md"""
   a panel that is in progress.
   """
 @Base.kwdef struct Panel <: CuttablePanel
+  uid::Int = panelUID()
   length::LengthType
   width::LengthType
   cut_from::CuttablePanel
@@ -407,6 +443,7 @@ md"""
 
 # ╔═╡ 702afb66-eb60-4d13-84ff-d8eccd9e173c
 @Base.kwdef struct ScrappedPanel <: AbstractPanel
+  uid::Int = panelUID()
   was::Panel    # We should never be scrapping an AvailablePanel.
 end
 
@@ -433,18 +470,22 @@ md"""
   """
 
 # ╔═╡ b264c74c-1470-4a0b-a693-922dd40a1216
+begin
 """
   matches an AbstractedWantedPanel that we've successfully made.
   """
 @Base.kwdef struct FinishedPanel <: AbstractPanel
+  uid::Int = panelUID()
   wanted::AbstractWantedPanel
   was::CuttablePanel
-  
+end
+
   function FinishedPanel(candidate::Panel, wanted::AbstractWantedPanel)
     @assert candidate.length == wanted.length
     @assert candidate.width == wanted.width
-    new(wanted, candidate)
+    FinishedPanel(; wanted=wanted, was=candidate)
   end
+
 end
 
 # ╔═╡ c012d7a5-6b89-455c-a4ca-7f50b507d670
@@ -553,7 +594,7 @@ end
 
 # ╔═╡ a7403050-4bbd-4f0b-9dd7-3dcfa06e43db
 # Why we need to add unique ids to all panels:
-# @assert !(BoughtPanel(AVAILABLE_PANELS[1]) === BoughtPanel(AVAILABLE_PANELS[1]))
+@assert !(BoughtPanel(AVAILABLE_PANELS[1]) === BoughtPanel(AVAILABLE_PANELS[1]))
 
 # ╔═╡ b03675d3-327d-4915-9a04-c9c6bbe04924
 md"""
@@ -602,17 +643,22 @@ function cut(panel::CuttablePanel,
   end
   cost = (panel.cost + COST_PER_CUT) / 2
   p2xy = moveby(panel.x, panel.y, axis, at + KERF)
-  panel1 = Panel(replace0(panel.length, panel.width,
-		 	  moveby(zerozero..., axis, at)...)...,
-                 panel, at, axis, panel.x, panel.y,
-	         cost)
+  panel1 = let
+    (l, w) = replace0(panel.length, panel.width,
+		      moveby(zerozero..., axis, at)...)
+    Panel(; length=l, width=w,
+          cut_from=panel, cut_at=at, cut_axis=axis,
+          x=panel.x, y=panel.y,
+	  cost=cost)
+  end
   panel2l = panel.length - p2xy[1]
   panel2w = panel.width - p2xy[2]
   if panel2l > 0u"inch" && panel2w > 0u"inch"
     (panel1,
-     Panel(panel2l, panel2w,
-           panel, at, axis, p2xy...,
-	   cost))
+     Panel(length=panel2l, width=panel2w,
+           cut_from=panel, cut_at=at, cut_axis=axis,
+           x=p2xy[1], y=p2xy[2],
+	   cost=cost))
   else
     (panel1,)
   end
@@ -724,7 +770,7 @@ begin
       if any((w) -> fitsin(w, p), wanted)
 	push!(working, p)
       else
-	push!(newlyscrapped, ScrappedPanel(p))
+	push!(newlyscrapped, ScrappedPanel(was=p))
       end
     end
     state = SearchState(;
@@ -1154,7 +1200,7 @@ end
 # ╔═╡ Cell order:
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
-# ╟─1871abc7-d4cb-4ebd-862e-660a9ce5dc56
+# ╠═1871abc7-d4cb-4ebd-862e-660a9ce5dc56
 # ╠═60fdb133-5d21-4445-90f9-3bbe49fb743b
 # ╟─5be6a7bd-b97c-4b97-ab47-9d83b3a2dd77
 # ╟─6835fdd3-eead-4d2b-81ce-a05df4f57499
