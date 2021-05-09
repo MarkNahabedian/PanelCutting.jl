@@ -215,7 +215,7 @@ md"""
 """
         specifies a Panel we're trying to make.
         """
-struct WantedPanel <: AbstractWantedPanel
+@Base.kwdef struct WantedPanel <: AbstractWantedPanel
   length::LengthType
   width::LengthType
   label
@@ -239,7 +239,7 @@ begin
           Specifies that a Panel will satisfy the want of our was panel
 	      even if its length and width are swapped.
           """
-  struct FlippedPanel <: AbstractWantedPanel
+  @Base.kwdef struct FlippedPanel <: AbstractWantedPanel
     was::WantedPanel
   end
 
@@ -304,7 +304,7 @@ md"""
 """
   A sheet of plywood we can buy frm the lumber yard.
   """
-struct AvailablePanel <: AbstractPanel
+@Base.kwdef struct AvailablePanel <: AbstractPanel
   label::String
   width::LengthType
   length::LengthType
@@ -356,7 +356,7 @@ a BoughtPanel is created to wrap an AvailablePanel when we add it to the working
 
 # ╔═╡ 235e25dc-7139-4a24-861b-a0e7451a45eb
 begin
-  struct BoughtPanel <: CuttablePanel
+  @Base.kwdef struct BoughtPanel <: CuttablePanel
 	was::AvailablePanel
   end
 
@@ -387,7 +387,7 @@ md"""
 """
   a panel that is in progress.
   """
-struct Panel <: CuttablePanel
+@Base.kwdef struct Panel <: CuttablePanel
   length::LengthType
   width::LengthType
   cut_from::CuttablePanel
@@ -406,7 +406,7 @@ md"""
   """
 
 # ╔═╡ 702afb66-eb60-4d13-84ff-d8eccd9e173c
-struct ScrappedPanel <: AbstractPanel
+@Base.kwdef struct ScrappedPanel <: AbstractPanel
   was::Panel    # We should never be scrapping an AvailablePanel.
 end
 
@@ -436,7 +436,7 @@ md"""
 """
   matches an AbstractedWantedPanel that we've successfully made.
   """
-struct FinishedPanel <: AbstractPanel
+@Base.kwdef struct FinishedPanel <: AbstractPanel
   wanted::AbstractWantedPanel
   was::CuttablePanel
   
@@ -1155,7 +1155,7 @@ end
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
 # ╟─1871abc7-d4cb-4ebd-862e-660a9ce5dc56
-# ╟─60fdb133-5d21-4445-90f9-3bbe49fb743b
+# ╠═60fdb133-5d21-4445-90f9-3bbe49fb743b
 # ╟─5be6a7bd-b97c-4b97-ab47-9d83b3a2dd77
 # ╟─6835fdd3-eead-4d2b-81ce-a05df4f57499
 # ╟─1292709e-63f9-4f9f-a6c0-0e9068a4c6b6
@@ -1166,19 +1166,19 @@ end
 # ╠═594a5dc5-77cc-4610-8ae0-2ee54abb1d4b
 # ╠═ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─adb89a84-5223-42db-90d5-8703b2d9a3b7
-# ╟─5176ae29-b9ac-4c20-82c2-2e054a32eecc
-# ╟─4fcb103c-fca4-4bd5-8d55-018bdf73a686
+# ╠═5176ae29-b9ac-4c20-82c2-2e054a32eecc
+# ╠═4fcb103c-fca4-4bd5-8d55-018bdf73a686
 # ╟─f6a43438-d7b0-442d-bb05-9e4488855665
 # ╟─65adef2d-9a53-4310-81a0-5dbb6d0918ca
 # ╟─8f925530-7e76-44f7-9557-64d4629a5e39
-# ╟─235e25dc-7139-4a24-861b-a0e7451a45eb
+# ╠═235e25dc-7139-4a24-861b-a0e7451a45eb
 # ╟─61e200af-6d6a-48c0-98e5-41b98dc2de9c
 # ╠═89b2a4cc-de85-41d0-b91d-44600fb39fe6
 # ╟─41a5afbb-146a-407e-836e-299d80d7c55d
-# ╟─702afb66-eb60-4d13-84ff-d8eccd9e173c
-# ╟─fbc6012e-8893-4634-b632-1609c5a1d23a
+# ╠═702afb66-eb60-4d13-84ff-d8eccd9e173c
+# ╠═fbc6012e-8893-4634-b632-1609c5a1d23a
 # ╟─63b95b10-769f-4e8c-ad7f-6f6471155c5c
-# ╟─b264c74c-1470-4a0b-a693-922dd40a1216
+# ╠═b264c74c-1470-4a0b-a693-922dd40a1216
 # ╟─c012d7a5-6b89-455c-a4ca-7f50b507d670
 # ╟─2fd93f59-4101-489f-b540-41d3ca48febf
 # ╠═65f4609e-5d6f-4ba6-a941-45c42ac396b4
