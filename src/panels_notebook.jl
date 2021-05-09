@@ -553,7 +553,7 @@ end
 
 # ╔═╡ a7403050-4bbd-4f0b-9dd7-3dcfa06e43db
 # Why we need to add unique ids to all panels:
-@assert !(BoughtPanel(AVAILABLE_PANELS[1]) === BoughtPanel(AVAILABLE_PANELS[1]))
+# @assert !(BoughtPanel(AVAILABLE_PANELS[1]) === BoughtPanel(AVAILABLE_PANELS[1]))
 
 # ╔═╡ b03675d3-327d-4915-9a04-c9c6bbe04924
 md"""
@@ -596,8 +596,7 @@ true
 """  
 function cut(panel::CuttablePanel,
              axis::Axis,
-             at::LengthType)::Union{Nothing, Tuple{Panel},
-                                    Tuple{Panel, Panel}}
+             at::LengthType)
   if distance(panel, axis) < at
     return (())
   end
@@ -623,6 +622,14 @@ end
 begin
   panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20))
 
+  let
+	result = cut(panel1, LengthAxis(), 61u"inch")
+	@assert result == (())  "$(result) == (())"
+  end
+  let
+	result = length(cut(panel1, LengthAxis(), 29.8u"inch"))
+	@assert length(result) == 1  "length($(result)) == 1"
+  end
   # Cut panel1 at 25" down LengthAxis:
   panel2, panel3 = cut(panel1, LengthAxis(), 25u"inch")
   @assert panel2.length == 25u"inch"  """got $(panel2.length), expected $(25u"inch")"""
@@ -850,7 +857,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
 	enqueue(searcher, SearchState(state, COST_PER_CUT,
 				      FinishedPanel(cuts[1], wanted),
                                       working,
-				      cuts[2]))
+						cuts[2:end]...))
 	continue
       end
       cuts2 = cut(cuts[1], other(axis), distance(wanted, other(axis)))
@@ -861,7 +868,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
       enqueue(searcher, SearchState(state, 2 * COST_PER_CUT,
 				    FinishedPanel(cuts2[1], wanted),
                                     working,
-				    cuts[2], cuts2[2]))
+					cuts[2:end]..., cuts2[2:end]...))
     end
   end
   return nothing
@@ -1145,7 +1152,7 @@ end
 +(area.(Set(wanda_box_panels))...)
 
 # ╔═╡ Cell order:
-# ╟─b019d660-9f77-11eb-1527-278a3e1b087c
+# ╠═b019d660-9f77-11eb-1527-278a3e1b087c
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
 # ╟─1871abc7-d4cb-4ebd-862e-660a9ce5dc56
 # ╟─60fdb133-5d21-4445-90f9-3bbe49fb743b
