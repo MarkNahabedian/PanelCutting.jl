@@ -422,8 +422,8 @@ md"""
 """
   a panel that is in progress.
   """
-@Base.kwdef struct Panel <: CuttablePanel
-  uid::Int = panelUID()
+struct Panel <: CuttablePanel
+  uid::Int
   length::LengthType
   width::LengthType
   cut_from::CuttablePanel
@@ -432,6 +432,18 @@ md"""
   x::LengthType
   y::LengthType
   cost
+
+  function Panel(; length::LengthType, width::LengthType,
+			cut_from::CuttablePanel, cut_at::LengthType, cut_axis::Axis,
+			x::LengthType, y::LengthType, cost)
+	@assert length > 0u"inch"  "length $length > 0"
+	@assert width > 0u"inch"   "width $width > 0"
+	@assert x >= 0u"inch"      "x $x >= 0"
+	@assert y >= 0u"inch"      "y $y >= 0"
+	new(panelUID(), length, width,
+		cut_from, cut_at, cut_axis,
+		x, y, cost)
+  end
 end
 
 # ╔═╡ 41a5afbb-146a-407e-836e-299d80d7c55d
