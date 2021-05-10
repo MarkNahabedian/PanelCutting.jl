@@ -537,6 +537,46 @@ begin
   Panels{T} = Tuple{Vararg{T}}
 end
 
+# ╔═╡ a10f122d-fe66-4523-8322-6907481a096f
+md"""
+## Progenitor
+"""
+
+# ╔═╡ 5f83ca7d-aa0d-490c-9b03-122dff375c12
+begin
+  md"""
+  return the BoughtPanel that this panel was cut from, or nothing.
+  """
+  function Progenitor end
+
+  progenitor(::AbstractPanel) = nothing
+	
+  progenitor(panel::BoughtPanel) = panel
+	
+  function progenitor(panel::FinishedPanel)
+	progenitor(panel.was)
+  end
+  
+  function progenitor(panel::Panel)::BoughtPanel
+    progenitor(panel.cut_from)
+  end
+	
+  struct PanelOverlapError <: Exception
+	panel1::AbstractPanel
+	panel2::AbstractPanel
+	state
+  end
+	
+  function Base.showerror(io::IO, e::PanelOverlapError)
+	print(io, "panels overlap: \n  ", e.panel1, "\n  ", e.panel2)
+  end
+	
+end
+
+# ╔═╡ a7403050-4bbd-4f0b-9dd7-3dcfa06e43db
+# Why we need to add unique ids to all panels:
+@assert BoughtPanel(AVAILABLE_PANELS[1]) != BoughtPanel(AVAILABLE_PANELS[1])
+
 # ╔═╡ c63390d5-1e04-44c0-8842-df2b07d8767b
 md"""
   ## Testing if Panels Overlap
@@ -578,6 +618,7 @@ begin
 
   function overlap(panel1::AbstractPanel, panel2::AbstractPanel)::Bool
     panel1 !== panel2 &&
+      progenitor(panel1) === progenitor(panel2) &&
       overlap(XSpan(panel1), XSpan(panel2)) &&
       overlap(YSpan(panel1), YSpan(panel2))
   end
@@ -603,10 +644,6 @@ begin
   end
 
 end
-
-# ╔═╡ a7403050-4bbd-4f0b-9dd7-3dcfa06e43db
-# Why we need to add unique ids to all panels:
-@assert !(BoughtPanel(AVAILABLE_PANELS[1]) === BoughtPanel(AVAILABLE_PANELS[1]))
 
 # ╔═╡ b03675d3-327d-4915-9a04-c9c6bbe04924
 md"""
@@ -743,14 +780,15 @@ begin
                          scrapped=Panels{ScrappedPanel}([]),
                          working=Panels{CuttablePanel}([]),
                          accumulated_cost=0)
+	  newstate = new(wanted, finished, scrapped, working, accumulated_cost)
 	  panels = AllOf(finished, scrapped, working)
 	  for i in 1:length(panels)
 		for j in i+1:length(panels)
-		  @assert !overlap(panels[i], panels[j])  (
-				  "Overlap:\n$(panels[i])\n$(panels[j])")
+		  @assert !overlap(panels[i], panels[j]) PanelOverlapError(
+						   panels[1], panels[j], newstate)
 		end
 	  end
-      new(wanted, finished, scrapped, working, accumulated_cost)
+      return newstate
     end
   end
   
@@ -1240,9 +1278,11 @@ end
 # ╟─c012d7a5-6b89-455c-a4ca-7f50b507d670
 # ╟─2fd93f59-4101-489f-b540-41d3ca48febf
 # ╠═65f4609e-5d6f-4ba6-a941-45c42ac396b4
+# ╟─a10f122d-fe66-4523-8322-6907481a096f
+# ╠═5f83ca7d-aa0d-490c-9b03-122dff375c12
+# ╠═a7403050-4bbd-4f0b-9dd7-3dcfa06e43db
 # ╟─c63390d5-1e04-44c0-8842-df2b07d8767b
 # ╠═e0247c8e-c10f-44f8-af9b-3fd3a0b921ed
-# ╠═a7403050-4bbd-4f0b-9dd7-3dcfa06e43db
 # ╟─b03675d3-327d-4915-9a04-c9c6bbe04924
 # ╠═ce55a015-792b-41e1-9426-e5a349cf5ec1
 # ╠═952a3952-7632-4355-beea-ab064d4b374d
