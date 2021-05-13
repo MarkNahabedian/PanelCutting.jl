@@ -268,6 +268,7 @@ begin
   function Base.getproperty(panel::FlippedPanel, prop::Symbol)
     was = getfield(panel, :was)
 	@match prop begin
+		:uid     => return getfield(panel, :uid)
 		:was     => return was
 		:length  => return was.width
 		:width   => return was.length
@@ -398,9 +399,8 @@ begin
   function Base.getproperty(panel::BoughtPanel, prop::Symbol)
     was = getfield(panel, :was)
 	@match prop begin
+		:uid          =>  getfield(panel, :uid)
 		:was          =>  was
-		:length       =>  was.length
-		:width        =>  was.width
 	    _             =>  getproperty(was, prop)
     end
   end
@@ -463,10 +463,12 @@ end
 # delegations from ScrappedPanel to the Panel we're tagging as too small
 begin
   function Base.getproperty(panel::ScrappedPanel, property::Symbol)
-    if property === :was
-      return getfield(panel, :was)
-    end
-    getfield(getfield(panel, :was), property)
+	was = getfield(panel, :was)
+	@match property begin
+	  :uid      => getfield(panel, :uid)
+	  :was      => was
+	  _         => getfield(was, property)
+	end
   end
 
   function Base.propertynames(panel::ScrappedPanel; private=false)
@@ -545,30 +547,24 @@ md"""
 # ╔═╡ 5f83ca7d-aa0d-490c-9b03-122dff375c12
 begin
   md"""
-  return the BoughtPanel that this panel was cut from, or nothing.
+  Return the BoughtPanel that this panel was cut from.
+  An AbstractPanel is its own progenitor.
+  A WantedPanel is its own progenitor.
+  A FlippedPanel is its own progenitor.
+	
+  progenitor is used in the overlap test: panels
+  can not overlap if they have different progeniyors.
   """
   function Progenitor end
 
-  progenitor(::AbstractPanel) = nothing
+  progenitor(panel::AbstractPanel) = panel
 	
-  progenitor(panel::BoughtPanel) = panel
-	
-  function progenitor(panel::FinishedPanel)
+  function progenitor(panel::FinishedPanel)::BoughtPanel
 	progenitor(panel.was)
   end
   
   function progenitor(panel::Panel)::BoughtPanel
     progenitor(panel.cut_from)
-  end
-	
-  struct PanelOverlapError <: Exception
-	panel1::AbstractPanel
-	panel2::AbstractPanel
-	state
-  end
-	
-  function Base.showerror(io::IO, e::PanelOverlapError)
-	print(io, "panels overlap: \n  ", e.panel1, "\n  ", e.panel2)
   end
 	
 end
@@ -582,15 +578,32 @@ md"""
   ## Testing if Panels Overlap
   """
 
+# ╔═╡ 977fe6fe-a8a0-4498-bf0d-4a6df65a1c85
+begin
+  struct PanelOverlapError <: Exception
+	panel1::AbstractPanel
+	panel2::AbstractPanel
+	state
+	why
+  end
+
+  function Base.showerror(io::IO, e::PanelOverlapError)
+	print(io, "PanelOverlapError: \n  ", e.panel1, "\n  ", e.panel2)
+  end
+end
+
 # ╔═╡ e0247c8e-c10f-44f8-af9b-3fd3a0b921ed
 # Spans
 begin
-	abstract type Span end
+
+  abstract type Span end
 
   struct XSpan <: Span
     c1
     c2
-    
+
+	XSpan(c1, c2) = new(c1, c2)
+
     function XSpan(panel::AbstractPanel)
       new(panel.x, panel.x + panel.length)
     end
@@ -599,7 +612,9 @@ begin
   struct YSpan <: Span
     c1
     c2
-    
+
+	YSpan(c1, c2) = new(c1, c2)
+
     function YSpan(panel::AbstractPanel)
       new(panel.y, panel.y + panel.width)
     end
@@ -615,35 +630,51 @@ begin
       within(s2.c1, s1) ||
       within(s2.c2, s1)
   end
-
-  function overlap(panel1::AbstractPanel, panel2::AbstractPanel)::Bool
-    panel1 !== panel2 &&
-      progenitor(panel1) === progenitor(panel2) &&
-      overlap(XSpan(panel1), XSpan(panel2)) &&
-      overlap(YSpan(panel1), YSpan(panel2))
+	
+  function errIfOverlap(panel1::AbstractPanel, panel2::AbstractPanel, state)::Nothing
+	distinct_panels = (panel1.uid !== panel2.uid)
+    same_progenitor = (progenitor(panel1).uid == progenitor(panel2).uid)
+    x_overlap = (overlap(XSpan(panel1), XSpan(panel2)))
+    y_overlap = (overlap(YSpan(panel1), YSpan(panel2)))
+	if distinct_panels && same_progenitor && x_overlap && y_overlap
+	  throw(PanelOverlapError(panel1, panel2, state,
+				(distinct_panels=distinct_panels,
+			 	 same_progenitor=same_progenitor,
+				 x_overlap=x_overlap,
+				 y_overlap=y_overlap)))
+	end
   end
-
-  function operlap(panel::AbstractPanel, panels::Panels)::Bool
-    for p in panels
-      if operlap(panel, p)
-        return true
-      end
-    end
-    return false
-  end
-
-  function overlap(panels::Panels, morepanels::Panels...)::Bool
-    for p in panels
-      for panels in morepanels
-        if overlap(p, panels)
-          return true
-        end
-      end
-    end
-    return false
-  end
-
 end
+
+# ╔═╡ 9537ad91-fec8-4159-9ed1-3f57174ce7f3
+let
+	xs1 = XSpan(0, 25)
+	xs2 = XSpan(25.125, 30)
+	@assert !overlap(xs1, xs2)
+end
+
+# ╔═╡ 19b79a97-fc75-480b-bdc6-829ec285d3fe
+  let
+	s = XSpan(0, 10)
+	@assert within(0, s)
+	@assert within(10, s)
+	@assert within(5, s)
+	@assert !within(12, s)
+  end
+
+# ╔═╡ 9a3ab7c1-c2c1-4744-8aec-b3e06fcd172c
+  let
+	s1 = XSpan(0, 10)
+	s2 = XSpan(3, 7)
+	s3 = XSpan(5, 15)
+	s4 = XSpan(12, 20)
+	@assert overlap(s1, s2)
+	@assert overlap(s2, s1)
+	@assert overlap(s1, s3)
+	@assert overlap(s3, s1)
+	@assert !overlap(s1, s4)
+	@assert !overlap(s4, s1)
+  end
 
 # ╔═╡ b03675d3-327d-4915-9a04-c9c6bbe04924
 md"""
@@ -784,8 +815,7 @@ begin
 	  panels = AllOf(finished, scrapped, working)
 	  for i in 1:length(panels)
 		for j in i+1:length(panels)
-		  @assert !overlap(panels[i], panels[j]) PanelOverlapError(
-						   panels[1], panels[j], newstate)
+		  errIfOverlap(panels[i], panels[j], newstate)
 		end
 	  end
       return newstate
@@ -1282,7 +1312,11 @@ end
 # ╠═5f83ca7d-aa0d-490c-9b03-122dff375c12
 # ╠═a7403050-4bbd-4f0b-9dd7-3dcfa06e43db
 # ╟─c63390d5-1e04-44c0-8842-df2b07d8767b
+# ╠═977fe6fe-a8a0-4498-bf0d-4a6df65a1c85
 # ╠═e0247c8e-c10f-44f8-af9b-3fd3a0b921ed
+# ╠═9537ad91-fec8-4159-9ed1-3f57174ce7f3
+# ╠═19b79a97-fc75-480b-bdc6-829ec285d3fe
+# ╠═9a3ab7c1-c2c1-4744-8aec-b3e06fcd172c
 # ╟─b03675d3-327d-4915-9a04-c9c6bbe04924
 # ╠═ce55a015-792b-41e1-9426-e5a349cf5ec1
 # ╠═952a3952-7632-4355-beea-ab064d4b374d
