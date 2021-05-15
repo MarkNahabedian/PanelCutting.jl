@@ -282,10 +282,11 @@ begin
   function flipped(panel::WantedPanel)  #  ::(::WantedPanel, ::FlippedPanel)
     return (panel, FlippedPanel(panel))
   end
-	
-  function wantsmatch(p1::AbstractWantedPanel, p2::AbstractWantedPanel)::Bool
-	p1.length == p2.length && p1.width == p2.width
-  end
+
+  wantsmatch(p1::WantedPanel, p2::WantedPanel) = p1 == p2
+  wantsmatch(p1::FlippedPanel, p2::FlippedPanel) = p1 == p2
+  wantsmatch(p1::WantedPanel, p2::FlippedPanel) = p1 == p2.was
+  wantsmatch(p1::FlippedPanel, p2::WantedPanel) = p1.was == p2
 
   # Testing
   let
@@ -295,7 +296,8 @@ begin
     @assert setdiff(Set(propertynames(f)), Set(propertynames(w))) == Set((:was,))
     @assert wantsmatch(w, w)
     @assert wantsmatch(f, f)
-	@assert !wantsmatch(w, f)
+	@assert wantsmatch(w, f)
+	@assert wantsmatch(f, w)
   end
 end
 
@@ -838,7 +840,7 @@ begin
       precursor.wanted
     else
       filter(precursor.wanted) do w
-	!wantsmatch(w, finished.wanted)
+		!wantsmatch(w, finished.wanted)
       end
     end
     newlyscrapped=[]
@@ -1261,7 +1263,7 @@ let
 	end
 	counts
 	=#
-	global s = searcher.cheapest
+	global s = searcher
 
 	foo = toSVG(searcher.cheapest)
     if true
@@ -1270,6 +1272,9 @@ let
       String(foo)
     end
 end
+
+# ╔═╡ b6b0890c-dca1-4d79-b6c1-3e1d5917937a
+s
 
 # ╔═╡ 7e037d3c-fc1a-44a9-9718-dc4f069379db
 wanda_box_panels
@@ -1290,13 +1295,6 @@ allsubtypes(AbstractPanel)
 md"""
   # Experiments
   """
-
-# ╔═╡ 1d0d28b0-30fd-4acb-bb20-18e9659f8549
-begin
-  x = (3, 5)
-  a, b = x
-  "$a  $b"
-end
 
 # ╔═╡ bb38f4c1-4443-4b33-a526-b5cc653f437b
 +(area.(Set(wanda_box_panels))...)
@@ -1374,9 +1372,9 @@ end
 # ╟─58cd80ab-5a98-4b34-9bc2-a414d766a486
 # ╠═4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 # ╠═aeaa6940-4f97-4286-97d4-7ad6dc6013b1
+# ╠═b6b0890c-dca1-4d79-b6c1-3e1d5917937a
 # ╠═7e037d3c-fc1a-44a9-9718-dc4f069379db
 # ╠═97d24eee-024e-4079-948a-49245fd3c734
 # ╠═52956b53-22a2-47c2-bb8d-d70ea63dcff6
 # ╟─70685b9d-b660-4443-ae7f-a0659456dc4f
-# ╠═1d0d28b0-30fd-4acb-bb20-18e9659f8549
 # ╠═bb38f4c1-4443-4b33-a526-b5cc653f437b
