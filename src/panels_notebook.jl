@@ -260,7 +260,7 @@ begin
 	uid::Int = panelUID()
     was::WantedPanel
   end
-	
+
   function FlippedPanel(was::WantedPanel)
 	FlippedPanel(; was=was)
 	end
@@ -268,21 +268,15 @@ begin
   function Base.getproperty(panel::FlippedPanel, prop::Symbol)
     was = getfield(panel, :was)
 	@match prop begin
-		:uid     => return getfield(panel, :uid)
-		:was     => return was
-		:length  => return was.width
-		:width   => return was.length
+		:length  => was.width
+		:width   => was.length
+		:label   => "flipped $(was.label)"
+		_        => getfield(panel, prop)
 	end
-    if prop in propertynames(was)
-      return getproperty(was, prop)
-    else
-      return getfield(panel, prop)
-    end
   end
-
+ 
   function Base.propertynames(panel::FlippedPanel, private::Bool=false)
-    (fieldnames(typeof(panel))...,
-     fieldnames(typeof(panel.was))...)
+    (:length, :width, :label, fieldnames(typeof(panel))...)
   end
 
   function flipped(panel::WantedPanel)  #  ::(::WantedPanel, ::FlippedPanel)
@@ -298,7 +292,6 @@ begin
     w, f = flipped(WantedPanel(width=1u"inch", length=2u"inch", label="foo"))
     @assert w.length == f.width
     @assert w.width == f.length
-    @assert w.label == f.label
     @assert setdiff(Set(propertynames(f)), Set(propertynames(w))) == Set((:was,))
     @assert wantsmatch(w, w)
     @assert wantsmatch(f, f)
@@ -399,14 +392,18 @@ begin
   function Base.getproperty(panel::BoughtPanel, prop::Symbol)
     was = getfield(panel, :was)
 	@match prop begin
-		:uid          =>  getfield(panel, :uid)
-		:was          =>  was
-	    _             =>  getproperty(was, prop)
-    end
+		:x       => was.x
+		:y       => was.y
+		:length  => was.length
+		:width   => was.width
+		:label   => was.label
+		:cost    => was.cost
+		_        => getfield(panel, prop)	
+	end
   end
 
   function Base.propertynames(panel::BoughtPanel, private::Bool=false)
-    (:was, propertynames(panel.was)...)
+    (:x, :y, :length, :width, :label, :cost, fieldnames(typeof(panel))...)
   end
 
 end
@@ -462,17 +459,21 @@ end
 # ╔═╡ fbc6012e-8893-4634-b632-1609c5a1d23a
 # delegations from ScrappedPanel to the Panel we're tagging as too small
 begin
-  function Base.getproperty(panel::ScrappedPanel, property::Symbol)
+  function Base.getproperty(panel::ScrappedPanel, prop::Symbol)
 	was = getfield(panel, :was)
-	@match property begin
-	  :uid      => getfield(panel, :uid)
-	  :was      => was
-	  _         => getfield(was, property)
+	@match prop begin
+		:x       => was.x
+		:y       => was.y
+		:length  => was.length
+		:width   => was.width
+		:label   => "scrapped from $(was.label)"
+		:cost    => was.cost
+		_        => getfield(panel, prop)
 	end
   end
 
   function Base.propertynames(panel::ScrappedPanel; private=false)
-    fieldnames(Panel)
+    (:x, :y, :length, :width, :label, :cost, fieldnames(typeof(panel))...)
   end
 end
 
@@ -488,35 +489,35 @@ begin
 """
   matches an AbstractedWantedPanel that we've successfully made.
   """
-@Base.kwdef struct FinishedPanel <: AbstractPanel
-  uid::Int = panelUID()
+struct FinishedPanel <: AbstractPanel
+  uid::Int
   wanted::AbstractWantedPanel
   was::CuttablePanel
-end
-
+		
   function FinishedPanel(candidate::Panel, wanted::AbstractWantedPanel)
     @assert candidate.length == wanted.length
     @assert candidate.width == wanted.width
-    FinishedPanel(; wanted=wanted, was=candidate)
+	new(panelUID(), wanted, candidate)
   end
-
 end
-
-# ╔═╡ c012d7a5-6b89-455c-a4ca-7f50b507d670
-# Delegation from FinishedPanel to Panel
-begin
-  function Base.getproperty(panel::FinishedPanel, property::Symbol)
-    @match property begin
-      :was        => getfield(panel, :was)
-      :wanted     => getfield(panel, :wanted)
-      :label      => getfield(getfield(panel, :wanted), :label)
-      _           => Base.getproperty(Core.getfield(panel, :was), property)
-    end
+	
+  function Base.getproperty(panel::FinishedPanel, prop::Symbol)
+	was = getfield(panel, :was)
+	@match prop begin
+		:x         => was.x
+		:y         => was.y
+		:length    => was.length
+		:width     => was.width
+		:label     => getfield(panel, :wanted).label
+		:cost      => was.cost
+		_          => getfield(panel, prop)
+	end
+  end
+	
+  function Base.propertynames(panel::FinishedPanel, private::Bool=false)
+    (:x, :y, :length, :width, :label, :cost, fieldnames(typeof(panel))...)
   end
 
-  function Base.propertynames(panel::FinishedPanel; private=false)
-    (:was, :wanted, Base.fieldnames(Panel)...)
-  end
 end
 
 # ╔═╡ 2fd93f59-4101-489f-b540-41d3ca48febf
@@ -1127,6 +1128,13 @@ end
 # ╔═╡ 099be731-dd16-4f56-af53-269e38ada04b
 const SVG_PANEL_MARGIN = 2u"inch"
 
+# ╔═╡ 495229d3-c8f8-4410-be90-3737655207ce
+function toSVG(state::SearchState)
+  buf = IOBuffer()
+  toSVG(buf, state)
+  return take!(buf)
+end
+
 # ╔═╡ bcbcf050-ee5f-4531-b432-7e2006fccc1e
 function toSVG(io::IO, state::SearchState)::Nothing
 	rpg = makeReversePanelGraph(state)
@@ -1214,15 +1222,24 @@ function toSVG(io::IO, panel::FinishedPanel, rpg::ReversePanelGraph)::Nothing
 	end
 end
 
+# ╔═╡ dcbc9193-fa7a-435b-8f68-05b77e1d9b36
+md"""
+# Panel Progression Graph
+"""
+
+# ╔═╡ bd178f5d-7701-4a09-ba6d-0b80712bc3e2
+
+
+# ╔═╡ 58cd80ab-5a98-4b34-9bc2-a414d766a486
+md"""
+# Examples / Testing
+"""
+
 # ╔═╡ 4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 let
   searcher = Searcher(wanda_box_panels[1:2])
   run(searcher)
-  println(searcher.finished_states)
-  searcher
-  buf = IOBuffer()
-  toSVG(buf, searcher.cheapest)
-  foo = take!(buf)
+  foo = toSVG(searcher.cheapest)
   if true
 	DisplayAs.SVG(Drawing(foo))
   else
@@ -1234,21 +1251,28 @@ end
 let
 	searcher = Searcher(wanda_box_panels)
 	run(searcher)
-	@assert length(searcher.cheapest.finished) == length(wanda_box_panels)
+	# @assert length(searcher.cheapest.finished) == length(wanda_box_panels)
 	rpg = makeReversePanelGraph(searcher.cheapest)
+
+	#=
 	counts = []
 	for (k, v) in rpg
 		push!(counts, (length(v), k))
 	end
 	counts
+	=#
+	global s = searcher.cheapest
 
-	buf = IOBuffer()
-	toSVG(buf, searcher.cheapest)
-	foo = take!(buf)
-	# DisplayAs.SVG(Drawing(foo))
-	# length(keys(rpg))
-	String(foo)
+	foo = toSVG(searcher.cheapest)
+    if true
+   	  DisplayAs.SVG(Drawing(foo))
+    else
+      String(foo)
+    end
 end
+
+# ╔═╡ 7e037d3c-fc1a-44a9-9718-dc4f069379db
+wanda_box_panels
 
 # ╔═╡ 97d24eee-024e-4079-948a-49245fd3c734
 function allsubtypes(t, result=Set())
@@ -1305,7 +1329,6 @@ end
 # ╠═fbc6012e-8893-4634-b632-1609c5a1d23a
 # ╟─63b95b10-769f-4e8c-ad7f-6f6471155c5c
 # ╠═b264c74c-1470-4a0b-a693-922dd40a1216
-# ╟─c012d7a5-6b89-455c-a4ca-7f50b507d670
 # ╟─2fd93f59-4101-489f-b540-41d3ca48febf
 # ╠═65f4609e-5d6f-4ba6-a941-45c42ac396b4
 # ╟─a10f122d-fe66-4523-8322-6907481a096f
@@ -1340,13 +1363,18 @@ end
 # ╠═c2a34850-17eb-43ca-b6c1-262dc67d6006
 # ╠═36f08b38-d725-48fb-a44e-ebc9491fc215
 # ╠═099be731-dd16-4f56-af53-269e38ada04b
+# ╠═495229d3-c8f8-4410-be90-3737655207ce
 # ╠═bcbcf050-ee5f-4531-b432-7e2006fccc1e
 # ╠═ffe9f05a-4348-4967-ba9d-5b0cc57dd70b
 # ╠═738201a6-b769-4586-81cd-c8e73c9a6ad9
 # ╠═deb5d973-3fb6-48c9-87da-ed50eb4cd33d
 # ╠═c90350c2-9c91-43df-b7ed-2ed77f960e6d
+# ╟─dcbc9193-fa7a-435b-8f68-05b77e1d9b36
+# ╠═bd178f5d-7701-4a09-ba6d-0b80712bc3e2
+# ╟─58cd80ab-5a98-4b34-9bc2-a414d766a486
 # ╠═4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 # ╠═aeaa6940-4f97-4286-97d4-7ad6dc6013b1
+# ╠═7e037d3c-fc1a-44a9-9718-dc4f069379db
 # ╠═97d24eee-024e-4079-948a-49245fd3c734
 # ╠═52956b53-22a2-47c2-bb8d-d70ea63dcff6
 # ╟─70685b9d-b660-4443-ae7f-a0659456dc4f
