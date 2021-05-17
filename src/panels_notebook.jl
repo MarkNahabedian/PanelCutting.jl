@@ -4,8 +4,24 @@
 using Markdown
 using InteractiveUtils
 
+# ╔═╡ 5f5c5ef3-efed-4afd-b304-5b37a9a81bd2
+LOAD_PATH
+
 # ╔═╡ b019d660-9f77-11eb-1527-278a3e1b087c
 begin
+  #=
+  using Pkg
+  Pkg.activate(mktempdir())
+  Pkg.add([
+    Pkg.PackageSpec(name="Unitful", version="1.7.0"),
+    Pkg.PackageSpec(name="UnitfulUS", version="0.2.0"),
+    Pkg.PackageSpec(name="Match", version="1.1.0"),
+    Pkg.PackageSpec(name="DataStructures", version="0.18.9"),
+    Pkg.PackageSpec(name="DisplayAs", version="0.1.2"),
+    Pkg.PackageSpec(; name="NativeSVG",
+                    path="c:/Users/Mark Nahabedian/.julia/dev/NativeSVG.jl")
+  ])
+=#
   using Unitful
   using UnitfulUS
   using Match
@@ -1036,6 +1052,13 @@ const STYLESHEET = """
     stroke: none;
     fill: rgba(0%, 50%, 0%, 50%);
   }
+  text.finished {
+	color: white;
+    text-anchor: middle;
+	font-family: sans-serif;
+    font-size: 2px;
+	vector-effect: non-scaling-stroke;
+  }
 """
 
 # ╔═╡ 134ac318-adb5-4939-96f7-3b70b12ffe43
@@ -1078,7 +1101,23 @@ function panelrect(io::IO, panel::AbstractPanel, cssclass::String)
 			 x=svgdistance(panel.x),
 			 y=svgdistance(panel.y),
 			 width=svgdistance(panel.length),
-			 height=svgdistance(panel.width))
+			 height=svgdistance(panel.width)) do
+		  if panel isa FinishedPanel
+		    title(io) do
+			  print(io, "$(panel.length) × $(panel.width)")
+		    end
+		  end
+		end
+  # Text comes out gawdawful huge
+		if panel isa FinishedPanel
+		  text(io;
+				class = cssclass,
+				x = svgdistance(panel.x + panel.length / 2),
+				y = svgdistance(panel.y + panel.width / 2)) do
+			write(io, "$(panel.length) × $(panel.width)")
+		  end
+		end
+
 	end
 end
 
@@ -1301,6 +1340,7 @@ md"""
 
 # ╔═╡ Cell order:
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
+# ╠═5f5c5ef3-efed-4afd-b304-5b37a9a81bd2
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
 # ╠═1871abc7-d4cb-4ebd-862e-660a9ce5dc56
 # ╠═60fdb133-5d21-4445-90f9-3bbe49fb743b
