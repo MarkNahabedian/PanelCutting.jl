@@ -295,7 +295,10 @@ begin
     (:length, :width, :label, fieldnames(typeof(panel))...)
   end
 
-  function flipped(panel::WantedPanel)  #  ::(::WantedPanel, ::FlippedPanel)
+  function flipped(panel::WantedPanel)
+	if panel.length == panel.width
+	  return (panel,)
+	end
     return (panel, FlippedPanel(panel))
   end
 
@@ -314,6 +317,10 @@ begin
     @assert wantsmatch(f, f)
 	@assert wantsmatch(w, f)
 	@assert wantsmatch(f, w)
+	@assert length(flipped(WantedPanel(width=10u"inch",
+					length=10u"inch",
+					label="square"))) == 1
+	
   end
 end
 
@@ -1276,6 +1283,11 @@ md"""
 # Examples / Testing
 """
 
+# ╔═╡ c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
+md"""
+## Two Panels From One Sheet of Stock
+"""
+
 # ╔═╡ 4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 let
   searcher = Searcher(wanda_box_panels[1:2])
@@ -1287,6 +1299,11 @@ let
     String(foo)
   end
 end
+
+# ╔═╡ 40eda0d7-3871-48d6-9976-e9dd7829265d
+md"""
+## Panels for a Complete Five Sided Box
+"""
 
 # ╔═╡ aeaa6940-4f97-4286-97d4-7ad6dc6013b1
 let
@@ -1312,8 +1329,22 @@ let
     end
 end
 
-# ╔═╡ b6b0890c-dca1-4d79-b6c1-3e1d5917937a
-s
+# ╔═╡ a968cf5a-bed4-4939-980f-86e90903b756
+md"""
+## A Complete Box Allowing Flipping
+"""
+
+# ╔═╡ 81b8240b-e3c0-427d-b57a-b07e52963f15
+let
+	searcher = Searcher(collect(Iterators.flatten(flipped.(wanda_box_panels))))
+	run(searcher)
+	foo = toSVG(searcher.cheapest)
+    if true
+   	  DisplayAs.SVG(Drawing(foo))
+    else
+      String(foo)
+	end
+end
 
 # ╔═╡ 7e037d3c-fc1a-44a9-9718-dc4f069379db
 wanda_box_panels
@@ -1410,9 +1441,12 @@ md"""
 # ╟─dcbc9193-fa7a-435b-8f68-05b77e1d9b36
 # ╠═bd178f5d-7701-4a09-ba6d-0b80712bc3e2
 # ╟─58cd80ab-5a98-4b34-9bc2-a414d766a486
+# ╟─c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
 # ╠═4a9ebc9b-b91c-4ff6-ba55-2c32093044be
+# ╟─40eda0d7-3871-48d6-9976-e9dd7829265d
 # ╠═aeaa6940-4f97-4286-97d4-7ad6dc6013b1
-# ╠═b6b0890c-dca1-4d79-b6c1-3e1d5917937a
+# ╟─a968cf5a-bed4-4939-980f-86e90903b756
+# ╠═81b8240b-e3c0-427d-b57a-b07e52963f15
 # ╠═7e037d3c-fc1a-44a9-9718-dc4f069379db
 # ╠═97d24eee-024e-4079-948a-49245fd3c734
 # ╠═52956b53-22a2-47c2-bb8d-d70ea63dcff6
