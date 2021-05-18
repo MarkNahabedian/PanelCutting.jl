@@ -1310,17 +1310,6 @@ let
 	searcher = Searcher(wanda_box_panels)
 	run(searcher)
 	# @assert length(searcher.cheapest.finished) == length(wanda_box_panels)
-	rpg = makeReversePanelGraph(searcher.cheapest)
-
-	#=
-	counts = []
-	for (k, v) in rpg
-		push!(counts, (length(v), k))
-	end
-	counts
-	=#
-	global s = searcher
-
 	foo = toSVG(searcher.cheapest)
     if true
    	  DisplayAs.SVG(Drawing(foo))
