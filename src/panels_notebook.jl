@@ -1174,6 +1174,7 @@ begin
 end
 
 # ╔═╡ 099be731-dd16-4f56-af53-269e38ada04b
+# Space between panels in an SVG drawing, and space between panels and SVG edge.
 const SVG_PANEL_MARGIN = 2u"inch"
 
 # ╔═╡ 495229d3-c8f8-4410-be90-3737655207ce
@@ -1273,10 +1274,120 @@ end
 # ╔═╡ dcbc9193-fa7a-435b-8f68-05b77e1d9b36
 md"""
 # Panel Progression Graph
+
+A GraphViz graph that describes what panels are cut rom what other panels.
 """
 
 # ╔═╡ bd178f5d-7701-4a09-ba6d-0b80712bc3e2
+begin
+	"""
+Write a GraphViz dot file describing the panel cutting progression
+described in a SearchState.
+"""
+function dotgraph end
 
+function dotgraph(path::String, state::SearchState)
+  open(path, "w") do io
+    dotgraph(io, state)
+  end
+  return path
+end
+
+function dotgraph(io::IO, state::SearchState)::Nothing
+  visited = DefaultDict{AbstractPanel, Bool}(false)
+  write(io, "digraph panels {\n")
+  dg(p) = dotgraph(io, p, visited)
+  dg.(state.wanted)
+  dg.(state.finished)
+  dg.(state.scrapped)
+  dg.(state.working)
+  write(io, "}\n")
+  return nothing
+end
+
+function dotID(panel::AbstractPanel)
+  t = split(string(typeof(panel)), ".")[end]
+  "$(t)_$(string(panel.uid))"
+end
+
+function dotnode(io::IO, panel::AbstractPanel)
+  write(io, """  "$(dotID(panel))"\n""")
+end
+
+function dotnode(io::IO, panel::FinishedPanel)
+  write(io, """  "$(dotID(panel))"[shape=record; label="l: $(panel.length)|w: $(panel.width)"]\n""")
+end
+
+function dotnode(io::IO, panel::BoughtPanel)
+  write(io, """  "$(dotID(panel))"[shape=record; label="l: $(panel.length)|w: $(panel.width)|cost: $(panel.cost)"]\n""")
+end
+
+function dotnode(io::IO, panel::Panel)
+  from = if panel.cut_axis isa LengthAxis
+			"from end"
+		elseif panel.cut_axis isa WidthAxis
+			"from side"
+		end
+  write(io, """  "$(dotID(panel))"[label="$(panel.cut_at) $(from)"]\n""")
+end
+
+# Arcs are reversed so that they point from the panel being
+# cut to the results of that cut.
+function diarc(io::IO, from::AbstractPanel, to::AbstractPanel)
+  write(io, """  "$(dotID(to))" -> "$(dotID(from))"\n""")
+end
+
+function dotgraph(io::IO, panel::AbstractPanel, visited)::Nothing
+  if visited[panel]
+	return
+  end
+  visited[panel] = true
+  dotgraph1(io, panel, visited)
+end
+
+function dotgraph1(io::IO, panel::AbstractPanel, visited)::Nothing
+  dotnode(io, panel)
+  return nothing
+end
+
+function dotgraph1(io::IO, panel::FlippedPanel, visited)::Nothing
+  dotnode(io, panel)
+  diarc(io, panel, panel.was)
+  dotgraph(io, panel.was, visited)
+  return nothing
+end
+
+function dotgraph1(io::IO, panel::BoughtPanel, visited)::Nothing
+  dotnode(io, panel)
+  diarc(io, panel, panel.was)
+  dotgraph(io, panel.was, visited)
+  return nothing
+end
+
+function dotgraph1(io::IO, panel::Panel, visited)::Nothing
+  dotnode(io, panel)
+  diarc(io, panel, panel.cut_from)
+  dotgraph(io, panel.cut_from, visited)
+  return nothing
+end
+
+function dotgraph1(io::IO, panel::ScrappedPanel, visited)::Nothing
+  dotnode(io, panel)
+  diarc(io, panel, panel.was)
+  dotgraph(io, panel.was, visited)
+  return nothing
+end
+
+function dotgraph1(io::IO, panel::FinishedPanel, visited)::Nothing
+  dotnode(io, panel)
+  diarc(io, panel, panel.was)
+  diarc(io, panel, panel.wanted)
+  dotgraph(io, panel.was, visited)
+  dotgraph(io, panel.wanted, visited)
+  return nothing
+end
+
+end
 
 # ╔═╡ 58cd80ab-5a98-4b34-9bc2-a414d766a486
 md"""
@@ -1292,6 +1403,7 @@ md"""
 let
   searcher = Searcher(wanda_box_panels[1:2])
   run(searcher)
+  dotgraph("ex1.dot", searcher.cheapest)
   foo = toSVG(searcher.cheapest)
   if true
 	DisplayAs.SVG(Drawing(foo))
@@ -1310,6 +1422,7 @@ let
 	searcher = Searcher(wanda_box_panels)
 	run(searcher)
 	# @assert length(searcher.cheapest.finished) == length(wanda_box_panels)
+	dotgraph("ex2.dot", searcher.cheapest)
 	foo = toSVG(searcher.cheapest)
     if true
    	  DisplayAs.SVG(Drawing(foo))
@@ -1327,6 +1440,7 @@ md"""
 let
 	searcher = Searcher(collect(Iterators.flatten(flipped.(wanda_box_panels))))
 	run(searcher)
+	dotgraph("ex3.dot", searcher.cheapest)
 	foo = toSVG(searcher.cheapest)
     if true
    	  DisplayAs.SVG(Drawing(foo))
