@@ -170,6 +170,7 @@ begin
   abstract type AbstractPanel end
   abstract type CuttablePanel <: AbstractPanel end
   abstract type AbstractWantedPanel <: AbstractPanel end
+  abstract type TerminalPanel <: AbstractPanel end
 
   LengthType = Unitful.Length
 
@@ -476,7 +477,7 @@ md"""
   """
 
 # ╔═╡ 702afb66-eb60-4d13-84ff-d8eccd9e173c
-@Base.kwdef struct ScrappedPanel <: AbstractPanel
+@Base.kwdef struct ScrappedPanel <: TerminalPanel
   uid::Int = panelUID()
   was::Panel    # We should never be scrapping an AvailablePanel.
 end
@@ -514,7 +515,7 @@ begin
 """
   matches an AbstractedWantedPanel that we've successfully made.
   """
-struct FinishedPanel <: AbstractPanel
+struct FinishedPanel <: TerminalPanel
   uid::Int
   wanted::AbstractWantedPanel
   was::CuttablePanel
@@ -1045,43 +1046,54 @@ which could be one-to-many, as a Dict.
 
 # ╔═╡ 148e3f7f-4ac6-4e57-be5d-fb4082bf1154
 begin
-	ReversePanelGraph = DefaultDict{AbstractPanel, Set{AbstractPanel}}
+	struct ReversePanelGraph
+		arcs::Set{Pair{AbstractPanel, AbstractPanel}}
 	
-	function note!(g::ReversePanelGraph, key::AbstractPanel, add::AbstractPanel)
-		push!(g[key], add)
+		ReversePanelGraph() = new(Set{Pair{AbstractPanel, AbstractPanel}}())
+	end
+	
+	function Base.haskey(rpg::ReversePanelGraph, key)::Bool
+		for p in rpg.arcs
+			if p.first == key
+				return true
+			end
+		end
+		return false
 	end
 
-	function makeReversePanelGraph(panel::AbstractPanel,
-				                   rpg::ReversePanelGraph)
-		return rpg
+	Base.keys(rpg::ReversePanelGraph) =
+		Set([p.first for p in rpg.arcs])
+
+	Base.values(rpg::ReversePanelGraph) =
+		Set([p.second for p in rpg.arcs])
+
+	Base.getindex(rpg::ReversePanelGraph, key) =
+		(p -> p.second).(filter(p -> p.first == key, rpg.arcs))
+
+	function injest(rpg::ReversePanelGraph, panel::AbstractPanel)
+	end
+	
+	function injest(rpg::ReversePanelGraph, panel::TerminalPanel)
+		push!(rpg.arcs, (panel.was) => panel)
+		injest(rpg, panel.was)
+	end
+
+	function injest(rpg::ReversePanelGraph, panel::Panel)
+		push!(rpg.arcs, (panel.cut_from) => panel)
+		injest(rpg, panel.cut_from)
 	end
 
 	function makeReversePanelGraph(state::SearchState)::ReversePanelGraph
-		rpg = ReversePanelGraph(() -> Set{AbstractPanel}())
+		rpg = ReversePanelGraph()
 		for f in state.finished
-			makeReversePanelGraph(f, rpg)
+			injest(rpg, f)
 		end
 		for s in state.scrapped
-			makeReversePanelGraph(s,rpg)
+			injest(rpg, s)
 		end
 		return rpg
 	end
-	
-	function makeReversePanelGraph(panel::FinishedPanel, rpg::ReversePanelGraph)
-		note!(rpg, panel.was, panel)
-		makeReversePanelGraph(panel.was, rpg)
-	end
-	
-	function makeReversePanelGraph(panel::ScrappedPanel, rpg::ReversePanelGraph)
-		note!(rpg, panel.was, panel)
-		makeReversePanelGraph(panel.was, rpg)
-	end
-		
-	function makeReversePanelGraph(panel::Panel, rpg::ReversePanelGraph)
-		note!(rpg, panel.cut_from, panel)
-		makeReversePanelGraph(panel.cut_from, rpg)
-	end
-	
+
 end
 
 # ╔═╡ 85f95152-93a2-42cd-80f3-c3d7d931dbfe
@@ -1165,7 +1177,6 @@ function panelrect(io::IO, panel::AbstractPanel, cssclass::String)
 		    end
 		  end
 		end
-  # Text comes out gawdawful huge
 		if panel isa FinishedPanel
 		  text(io;
 				class = cssclass,
