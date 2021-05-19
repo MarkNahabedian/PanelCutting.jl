@@ -1034,6 +1034,56 @@ function run(searcher::Searcher)
   end
 end
 
+# ╔═╡ df84b1ad-cbd5-4f7b-a37e-30534b17adcf
+md"""
+# Reverse Graph
+
+AbstractPanels are related to one another through a directed graph
+based on various relations.  Here we construct the inverse directed graph,
+which could be one-to-many, as a Dict.
+"""
+
+# ╔═╡ 148e3f7f-4ac6-4e57-be5d-fb4082bf1154
+begin
+	ReversePanelGraph = DefaultDict{AbstractPanel, Set{AbstractPanel}}
+	
+	function note!(g::ReversePanelGraph, key::AbstractPanel, add::AbstractPanel)
+		push!(g[key], add)
+	end
+
+	function makeReversePanelGraph(panel::AbstractPanel,
+				                   rpg::ReversePanelGraph)
+		return rpg
+	end
+
+	function makeReversePanelGraph(state::SearchState)::ReversePanelGraph
+		rpg = ReversePanelGraph(() -> Set{AbstractPanel}())
+		for f in state.finished
+			makeReversePanelGraph(f, rpg)
+		end
+		for s in state.scrapped
+			makeReversePanelGraph(s,rpg)
+		end
+		return rpg
+	end
+	
+	function makeReversePanelGraph(panel::FinishedPanel, rpg::ReversePanelGraph)
+		note!(rpg, panel.was, panel)
+		makeReversePanelGraph(panel.was, rpg)
+	end
+	
+	function makeReversePanelGraph(panel::ScrappedPanel, rpg::ReversePanelGraph)
+		note!(rpg, panel.was, panel)
+		makeReversePanelGraph(panel.was, rpg)
+	end
+		
+	function makeReversePanelGraph(panel::Panel, rpg::ReversePanelGraph)
+		note!(rpg, panel.cut_from, panel)
+		makeReversePanelGraph(panel.cut_from, rpg)
+	end
+	
+end
+
 # ╔═╡ 85f95152-93a2-42cd-80f3-c3d7d931dbfe
 md"""
 # Describing the Cuts using SVG
@@ -1126,51 +1176,6 @@ function panelrect(io::IO, panel::AbstractPanel, cssclass::String)
 		end
 
 	end
-end
-
-# ╔═╡ 36f08b38-d725-48fb-a44e-ebc9491fc215
-begin
-	#= AbstractPanels are related to one another through a directed graph
-	based on various relations.  Here we construct the inverse directed graph,
-	which could be one-to-many, as a Dict.
-	=#
-	ReversePanelGraph = DefaultDict{AbstractPanel, Set{AbstractPanel}}
-	
-	function note!(g::ReversePanelGraph, key::AbstractPanel, add::AbstractPanel)
-		push!(g[key], add)
-	end
-
-	function makeReversePanelGraph(panel::AbstractPanel,
-				                   rpg::ReversePanelGraph)
-		return rpg
-	end
-
-	function makeReversePanelGraph(state::SearchState)::ReversePanelGraph
-		rpg = ReversePanelGraph(() -> Set{AbstractPanel}())
-		for f in state.finished
-			makeReversePanelGraph(f, rpg)
-		end
-		for s in state.scrapped
-			makeReversePanelGraph(s,rpg)
-		end
-		return rpg
-	end
-	
-	function makeReversePanelGraph(panel::FinishedPanel, rpg::ReversePanelGraph)
-		note!(rpg, panel.was, panel)
-		makeReversePanelGraph(panel.was, rpg)
-	end
-	
-	function makeReversePanelGraph(panel::ScrappedPanel, rpg::ReversePanelGraph)
-		note!(rpg, panel.was, panel)
-		makeReversePanelGraph(panel.was, rpg)
-	end
-		
-	function makeReversePanelGraph(panel::Panel, rpg::ReversePanelGraph)
-		note!(rpg, panel.cut_from, panel)
-		makeReversePanelGraph(panel.cut_from, rpg)
-	end
-	
 end
 
 # ╔═╡ 099be731-dd16-4f56-af53-269e38ada04b
@@ -1527,13 +1532,14 @@ md"""
 # ╠═137932b7-b914-47f0-b355-2406c7dfe4a4
 # ╠═5aac7456-b32f-40e8-a015-fcbea6f638ff
 # ╠═4e51fc12-7f05-49e2-b55a-7d91c47dd185
+# ╟─df84b1ad-cbd5-4f7b-a37e-30534b17adcf
+# ╠═148e3f7f-4ac6-4e57-be5d-fb4082bf1154
 # ╟─85f95152-93a2-42cd-80f3-c3d7d931dbfe
 # ╠═2e1e9fc8-6209-4968-bf7e-fa97b72ebef3
 # ╟─134ac318-adb5-4939-96f7-3b70b12ffe43
 # ╠═d5b1c891-9529-4876-839f-cddd94d3d800
 # ╠═9d0fb461-46e4-4436-a367-5cdf3406474f
 # ╠═c2a34850-17eb-43ca-b6c1-262dc67d6006
-# ╠═36f08b38-d725-48fb-a44e-ebc9491fc215
 # ╠═099be731-dd16-4f56-af53-269e38ada04b
 # ╠═495229d3-c8f8-4410-be90-3737655207ce
 # ╠═bcbcf050-ee5f-4531-b432-7e2006fccc1e
