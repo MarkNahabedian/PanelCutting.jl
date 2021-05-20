@@ -1300,6 +1300,167 @@ md"""
 # Generic Dot Code
 """
 
+# ╔═╡ dcbc9193-fa7a-435b-8f68-05b77e1d9b36
+md"""
+# Panel Progression Graph
+
+A GraphViz graph that describes what panels are cut from what other panels.
+"""
+
+# ╔═╡ bd178f5d-7701-4a09-ba6d-0b80712bc3e2
+begin
+	# This graph just shows panels by their types and uids and
+	# the relationships between them,
+	function dotgraph(io::IO, state::SearchState)::Nothing
+		rpg = makeReversePanelGraph(state)
+		dotgraph(io, rpg)
+		return
+	end
+
+end
+
+# ╔═╡ 6bafdc76-dd65-47a6-9c34-90353408c488
+md"""
+# Panel Cut Graph
+
+The Panel Cut Graph is limited to describing starting and ending panels and the cuts that are made.  Irrelevant panels are elided.
+"""
+
+# ╔═╡ 7408dbb2-f396-4e8f-9686-d7ac1a522647
+begin
+  struct PanelCutGraph
+    state::SearchState
+    rpg::ReversePanelGraph
+
+    function PanelCutGraph(state::SearchState)
+      pcg = new(state, makeReversePanelGraph(state))
+      doTransformation(pcg, addCutNodes)
+      doTransformation(pcg, elideTerminalPanels)
+      pcg
+    end
+  end
+
+  arcs(pcg::PanelCutGraph) = arcs(pcg.rpg)
+
+  nodes(pcg::PanelCutGraph) = nodes(pcg.rpg)
+
+  struct CutNode
+    panel1::Panel
+    panel2::Panel
+  end
+
+  function dotID(n::CutNode)
+    return "CutNode_$(n.panel1.cut_from.uid)"
+  end
+
+  function dotnode(pcg::PanelCutGraph, io, n::CutNode)
+    write(io, """  "$(dotID(n))"[shape=egg; label=$(dotnodelabel(pcg, n))]\n""")
+    return n
+  end
+
+  function dotnodelabel(pcg::PanelCutGraph, n::CutNode)::String
+    from = if n.panel1.cut_axis isa LengthAxis
+      "from end"
+    elseif n.panel1.cut_axis isa WidthAxis
+      "from side"
+    end
+    return "cut $(n.panel1.cut_at) $(from)"
+  end
+
+  md"""
+  Compute the arguments to transform! in order to insert a
+  CutNode wherever a panel is cut.
+  """
+  function addCutNodes(pcg::PanelCutGraph, arc1::Pair, arc2::Pair)
+    add = Set()
+    remove = Set()
+    if arc1 == arc2
+      return add, remove
+    end
+    if arc1.first != arc2.first
+      return add, remove
+    end
+    if !(arc1.second isa Panel)
+      return add, remove
+    end
+    if !(arc2.second isa Panel)
+      return add, remove
+    end
+    if arc1.second == arc2.second
+      return add, remove
+    end
+    cutnode = CutNode(arc1.second, arc2.second)
+    push!(add, arc1.first => cutnode)
+    push!(add, arc2.first => cutnode)
+    push!(remove, arc1)
+    push!(remove, arc2)
+    push!(add, cutnode => cutnode.panel1)
+    push!(add, cutnode => cutnode.panel2)
+    return add, remove
+  end
+
+  md"""
+  Compute the arguments to transform! in order to elide a Panel that is
+  succeeded by a TerminalPanel.
+  
+  """
+  function elideTerminalPanels(pcg::PanelCutGraph, arc1, arc2)
+    add = Set()
+    remove = Set()
+    if arc1 == arc2
+      return add, remove
+    end
+    if !(arc2.second isa TerminalPanel)
+      return add, remove
+    end
+    if arc1.second != arc2.first
+      return add, remove
+    end
+    push!(add, arc1.first => arc2.second)
+    push!(remove, arc1)
+    push!(remove, arc2)
+    return add, remove
+  end
+           
+  function doTransformation(pcg::PanelCutGraph, rule)
+    add = Set()
+    remove = Set()
+    for arc1 in pcg.rpg.arcs, arc2 in pcg.rpg.arcs
+      a, r = rule(pcg, arc1, arc2)
+      union!(add, a)
+      union!(remove, r)
+    end
+    transform!(pcg.rpg, add, remove)
+  end
+
+  function dotnodelabel(graph::PanelCutGraph, panel::BoughtPanel)::String
+    return *("{",
+			join(["$(split(string(typeof(panel)), ".")[end])",
+                    "l: $(panel.length)",
+                    "w: $(panel.width)",
+                    "cost: $(panel.cost)"],
+                   "|"),
+              "}")
+  end
+
+  function dotnodelabel(graph::PanelCutGraph, panel::AbstractPanel)::String
+    return *("{",
+			join(["$(split(string(typeof(panel)), ".")[end])",
+                    "l: $(panel.length)",
+                    "w: $(panel.width)",
+                    "x: $(panel.x)",
+                    "y: $(panel.y)",
+                    "cost: $(panel.cost)"],
+                   "|"),
+              "}")
+  end
+
+  function dotnode(io::IO, graph::PanelCutGraph, panel::AbstractPanel)
+    write(io, """  "$(dotID(panel))"[shape=record; label="$(dotnodelabel(graph, panel))"]\n""")
+  end
+
+end
+
 # ╔═╡ f89c8f2e-8bdf-4d4e-8090-3f6a56e0ce85
 begin
 	
@@ -1346,38 +1507,13 @@ begin
 
 end
 
-# ╔═╡ dcbc9193-fa7a-435b-8f68-05b77e1d9b36
-md"""
-# Panel Progression Graph
-
-A GraphViz graph that describes what panels are cut rom what other panels.
-"""
-
-# ╔═╡ bd178f5d-7701-4a09-ba6d-0b80712bc3e2
-begin
-	# This graph just shows panels by their types and uids and
-	# the relationships between them,
-	function dotgraph(io::IO, state::SearchState)::Nothing
-		rpg = makeReversePanelGraph(state)
-		dotgraph(io, rpg)
-	end
-
-end
-
-# ╔═╡ 6bafdc76-dd65-47a6-9c34-90353408c488
-md"""
-# Panel Cut Graph
-
-The Panel Cut Graph is limited to describing to describing starting and ending panels and the cuts that are made.  Irrelevant panels are elided.
-"""
-
-# ╔═╡ 7408dbb2-f396-4e8f-9686-d7ac1a522647
-
-
 # ╔═╡ 58cd80ab-5a98-4b34-9bc2-a414d766a486
 md"""
 # Examples / Testing
 """
+
+# ╔═╡ ea2e76a2-23b6-43fa-99c3-d28f819566d4
+global trigger_dot = 0
 
 # ╔═╡ c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
 md"""
@@ -1389,6 +1525,8 @@ let
   searcher = Searcher(wanda_box_panels[1:2])
   run(searcher)
   dotgraph("ex1.dot", searcher.cheapest)
+  dotgraph("ex1cut.dot", PanelCutGraph(searcher.cheapest))
+  trigger_dot += 1
   foo = toSVG(searcher.cheapest)
   if true
 	DisplayAs.SVG(Drawing(foo))
@@ -1408,6 +1546,8 @@ let
 	run(searcher)
 	# @assert length(searcher.cheapest.finished) == length(wanda_box_panels)
 	dotgraph("ex2.dot", searcher.cheapest)
+	dotgraph("ex2cut.dot", PanelCutGraph(searcher.cheapest))
+	trigger_dot += 1
 	foo = toSVG(searcher.cheapest)
     if true
    	  DisplayAs.SVG(Drawing(foo))
@@ -1426,6 +1566,8 @@ let
 	searcher = Searcher(collect(Iterators.flatten(flipped.(wanda_box_panels))))
 	run(searcher)
 	dotgraph("ex3.dot", searcher.cheapest)
+	dotgraph("ex3cut.dot", PanelCutGraph(searcher.cheapest))
+	trigger_dot += 1
 	foo = toSVG(searcher.cheapest)
     if true
    	  DisplayAs.SVG(Drawing(foo))
@@ -1434,8 +1576,26 @@ let
 	end
 end
 
-# ╔═╡ 7e037d3c-fc1a-44a9-9718-dc4f069379db
-wanda_box_panels
+# ╔═╡ b07894d9-c5e3-43dc-acbf-fc7be295ac83
+md"""
+## Run Dot
+"""
+
+# ╔═╡ 4d0f06b1-d23d-49fd-828b-1da07ef2f8fd
+# Apparently MSWindows doesn't cope with unix wildcards.
+begin
+	trigger_dot
+	for f in readdir()
+		if endswith(f, ".dot")
+			Base.run(`dot -Tsvg -O $f`)
+		end
+	end
+end
+
+# ╔═╡ 2d6b3e56-0858-4b7a-9bd7-5d5fa2b835c9
+md"""
+# allsubtypes
+"""
 
 # ╔═╡ 97d24eee-024e-4079-948a-49245fd3c734
 function allsubtypes(t, result=Set())
@@ -1534,13 +1694,16 @@ md"""
 # ╟─6bafdc76-dd65-47a6-9c34-90353408c488
 # ╠═7408dbb2-f396-4e8f-9686-d7ac1a522647
 # ╟─58cd80ab-5a98-4b34-9bc2-a414d766a486
+# ╠═ea2e76a2-23b6-43fa-99c3-d28f819566d4
 # ╟─c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
 # ╠═4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 # ╟─40eda0d7-3871-48d6-9976-e9dd7829265d
 # ╠═aeaa6940-4f97-4286-97d4-7ad6dc6013b1
 # ╟─a968cf5a-bed4-4939-980f-86e90903b756
 # ╠═81b8240b-e3c0-427d-b57a-b07e52963f15
-# ╠═7e037d3c-fc1a-44a9-9718-dc4f069379db
+# ╟─b07894d9-c5e3-43dc-acbf-fc7be295ac83
+# ╠═4d0f06b1-d23d-49fd-828b-1da07ef2f8fd
+# ╟─2d6b3e56-0858-4b7a-9bd7-5d5fa2b835c9
 # ╠═97d24eee-024e-4079-948a-49245fd3c734
 # ╠═52956b53-22a2-47c2-bb8d-d70ea63dcff6
 # ╟─70685b9d-b660-4443-ae7f-a0659456dc4f
