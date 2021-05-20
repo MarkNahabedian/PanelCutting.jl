@@ -1353,8 +1353,8 @@ begin
     return "CutNode_$(n.panel1.cut_from.uid)"
   end
 
-  function dotnode(pcg::PanelCutGraph, io, n::CutNode)
-    write(io, """  "$(dotID(n))"[shape=egg; label=$(dotnodelabel(pcg, n))]\n""")
+  function dotnode(io::IO, pcg::PanelCutGraph, n::CutNode)
+    write(io, """  "$(dotID(n))"[shape=pentagon; label="$(dotnodelabel(pcg, n))"]\n""")
     return n
   end
 
@@ -1473,6 +1473,10 @@ begin
 	"""
   function dotgraph end
 
+  function rundot(path)
+	Base.run(`dot -Tsvg -O $path`)
+  end
+
   function dotgraph(path::String, graph)
     open(path, "w") do io
       dotgraph(io, graph)
@@ -1515,9 +1519,6 @@ md"""
 # Examples / Testing
 """
 
-# ╔═╡ ea2e76a2-23b6-43fa-99c3-d28f819566d4
-global trigger_dot = 0
-
 # ╔═╡ c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
 md"""
 ## Two Panels From One Sheet of Stock
@@ -1527,9 +1528,8 @@ md"""
 let
   searcher = Searcher(wanda_box_panels[1:2])
   run(searcher)
-  dotgraph("ex1.dot", searcher.cheapest)
-  dotgraph("ex1cut.dot", PanelCutGraph(searcher.cheapest))
-  trigger_dot += 1
+  rundot(dotgraph("ex1.dot", searcher.cheapest))
+  rundot(dotgraph("ex1cut.dot", PanelCutGraph(searcher.cheapest)))
   foo = toSVG(searcher.cheapest)
   if true
 	DisplayAs.SVG(Drawing(foo))
@@ -1548,9 +1548,8 @@ let
 	searcher = Searcher(wanda_box_panels)
 	run(searcher)
 	# @assert length(searcher.cheapest.finished) == length(wanda_box_panels)
-	dotgraph("ex2.dot", searcher.cheapest)
-	dotgraph("ex2cut.dot", PanelCutGraph(searcher.cheapest))
-	trigger_dot += 1
+	rundot(dotgraph("ex2.dot", searcher.cheapest))
+	rundot(dotgraph("ex2cut.dot", PanelCutGraph(searcher.cheapest)))
 	foo = toSVG(searcher.cheapest)
     if true
    	  DisplayAs.SVG(Drawing(foo))
@@ -1568,9 +1567,8 @@ md"""
 let
 	searcher = Searcher(collect(Iterators.flatten(flipped.(wanda_box_panels))))
 	run(searcher)
-	dotgraph("ex3.dot", searcher.cheapest)
-	dotgraph("ex3cut.dot", PanelCutGraph(searcher.cheapest))
-	trigger_dot += 1
+	rundot(dotgraph("ex3.dot", searcher.cheapest))
+	rundot(dotgraph("ex3cut.dot", PanelCutGraph(searcher.cheapest)))
 	foo = toSVG(searcher.cheapest)
     if true
    	  DisplayAs.SVG(Drawing(foo))
@@ -1579,22 +1577,6 @@ let
 	end
 	# (x -> "$(dotID(x.first)) => $(dotID(x.second))").(PanelCutGraph(searcher.cheapest).rpg.arcs)
 	# (x -> "$(dotID(x.first)) => $(dotID(x.second))").(makeReversePanelGraph(searcher.cheapest).arcs)
-end
-
-# ╔═╡ b07894d9-c5e3-43dc-acbf-fc7be295ac83
-md"""
-## Run Dot
-"""
-
-# ╔═╡ 4d0f06b1-d23d-49fd-828b-1da07ef2f8fd
-# Apparently MSWindows doesn't cope with unix wildcards.
-begin
-	trigger_dot
-	for f in readdir()
-		if endswith(f, ".dot")
-			Base.run(`dot -Tsvg -O $f`)
-		end
-	end
 end
 
 # ╔═╡ 2d6b3e56-0858-4b7a-9bd7-5d5fa2b835c9
@@ -1699,15 +1681,12 @@ md"""
 # ╟─6bafdc76-dd65-47a6-9c34-90353408c488
 # ╠═7408dbb2-f396-4e8f-9686-d7ac1a522647
 # ╟─58cd80ab-5a98-4b34-9bc2-a414d766a486
-# ╠═ea2e76a2-23b6-43fa-99c3-d28f819566d4
 # ╟─c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
 # ╠═4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 # ╟─40eda0d7-3871-48d6-9976-e9dd7829265d
 # ╠═aeaa6940-4f97-4286-97d4-7ad6dc6013b1
 # ╟─a968cf5a-bed4-4939-980f-86e90903b756
 # ╠═81b8240b-e3c0-427d-b57a-b07e52963f15
-# ╟─b07894d9-c5e3-43dc-acbf-fc7be295ac83
-# ╠═4d0f06b1-d23d-49fd-828b-1da07ef2f8fd
 # ╟─2d6b3e56-0858-4b7a-9bd7-5d5fa2b835c9
 # ╠═97d24eee-024e-4079-948a-49245fd3c734
 # ╠═52956b53-22a2-47c2-bb8d-d70ea63dcff6
