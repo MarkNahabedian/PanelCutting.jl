@@ -1389,9 +1389,12 @@ begin
     if arc1.second == arc2.second
       return add, remove
     end
+	if arc1.second.uid >= arc2.second.uid
+	  # break pair argument symetry
+	  return add, remove
+	end
     cutnode = CutNode(arc1.second, arc2.second)
     push!(add, arc1.first => cutnode)
-    push!(add, arc2.first => cutnode)
     push!(remove, arc1)
     push!(remove, arc2)
     push!(add, cutnode => cutnode.panel1)
@@ -1574,6 +1577,8 @@ let
     else
       String(foo)
 	end
+	# (x -> "$(dotID(x.first)) => $(dotID(x.second))").(PanelCutGraph(searcher.cheapest).rpg.arcs)
+	# (x -> "$(dotID(x.first)) => $(dotID(x.second))").(makeReversePanelGraph(searcher.cheapest).arcs)
 end
 
 # ╔═╡ b07894d9-c5e3-43dc-acbf-fc7be295ac83
