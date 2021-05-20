@@ -1047,7 +1047,7 @@ which could be one-to-many, as a Dict.
 # ╔═╡ 148e3f7f-4ac6-4e57-be5d-fb4082bf1154
 begin
 	struct ReversePanelGraph
-		arcs::Set{Pair{AbstractPanel, AbstractPanel}}
+		arcs::Set{Pair}
 	
 		ReversePanelGraph() = new(Set{Pair{AbstractPanel, AbstractPanel}}())
 	end
@@ -1066,6 +1066,10 @@ begin
 
 	Base.values(rpg::ReversePanelGraph) =
 		Set([p.second for p in rpg.arcs])
+	
+	nodes(rpg::ReversePanelGraph) = union(keys(rpg), values(rpg))
+	
+	arcs(rpg::ReversePanelGraph) = rpg.arcs
 
 	Base.getindex(rpg::ReversePanelGraph, key) =
 		(p -> p.second).(filter(p -> p.first == key, rpg.arcs))
@@ -1094,6 +1098,10 @@ begin
 		return rpg
 	end
 
+	function transform!(rpg::ReversePanelGraph, addarcs, removearcs)
+		setdiff!(rpg.arcs, removearcs)
+		union!(rpg.arcs, addarcs)
+	end
 end
 
 # ╔═╡ 85f95152-93a2-42cd-80f3-c3d7d931dbfe
@@ -1287,6 +1295,57 @@ function toSVG(io::IO, panel::FinishedPanel, rpg::ReversePanelGraph)::Nothing
 	end
 end
 
+# ╔═╡ 4cd74059-f59b-46e4-be23-bfbd95e4d96d
+md"""
+# Generic Dot Code
+"""
+
+# ╔═╡ f89c8f2e-8bdf-4d4e-8090-3f6a56e0ce85
+begin
+	
+  md"""
+	Write a GraphViz dot file describing the panel cutting progression
+	described in a SearchState.
+	"""
+  function dotgraph end
+
+  function dotgraph(path::String, graph)
+    open(path, "w") do io
+      dotgraph(io, graph)
+    end
+    return path
+  end
+  
+  function dotgraph(io::IO, graph)
+    write(io, "digraph panels {\n")
+    for node in nodes(graph)
+      dotnode(io, graph, node)
+    end
+    for arc in arcs(graph)
+      diarc(io, graph, arc.first, arc.second)
+    end
+	write(io, "}\n")
+  end
+
+  function dotnode(io::IO, graph, node)
+	write(io, """  "$(dotID(node))"\n""")
+  end
+
+  function diarc(io::IO, graph, arc::Pair)
+    diarc(io, graph, arc.from, arc.to)
+  end
+
+  function diarc(io::IO, graph, from, to)
+    write(io, """  "$(dotID(from))" -> "$(dotID(to))"\n""")
+  end
+	
+  function dotID(panel::AbstractPanel)
+	t = split(string(typeof(panel)), ".")[end]
+ 	"$(t)_$(string(panel.uid))"
+  end
+
+end
+
 # ╔═╡ dcbc9193-fa7a-435b-8f68-05b77e1d9b36
 md"""
 # Panel Progression Graph
@@ -1296,114 +1355,24 @@ A GraphViz graph that describes what panels are cut rom what other panels.
 
 # ╔═╡ bd178f5d-7701-4a09-ba6d-0b80712bc3e2
 begin
-	"""
-Write a GraphViz dot file describing the panel cutting progression
-described in a SearchState.
+	# This graph just shows panels by their types and uids and
+	# the relationships between them,
+	function dotgraph(io::IO, state::SearchState)::Nothing
+		rpg = makeReversePanelGraph(state)
+		dotgraph(io, rpg)
+	end
+
+end
+
+# ╔═╡ 6bafdc76-dd65-47a6-9c34-90353408c488
+md"""
+# Panel Cut Graph
+
+The Panel Cut Graph is limited to describing to describing starting and ending panels and the cuts that are made.  Irrelevant panels are elided.
 """
-function dotgraph end
 
-function dotgraph(path::String, state::SearchState)
-  open(path, "w") do io
-    dotgraph(io, state)
-  end
-  return path
-end
+# ╔═╡ 7408dbb2-f396-4e8f-9686-d7ac1a522647
 
-function dotgraph(io::IO, state::SearchState)::Nothing
-  visited = DefaultDict{AbstractPanel, Bool}(false)
-  write(io, "digraph panels {\n")
-  dg(p) = dotgraph(io, p, visited)
-  dg.(state.wanted)
-  dg.(state.finished)
-  dg.(state.scrapped)
-  dg.(state.working)
-  write(io, "}\n")
-  return nothing
-end
-
-function dotID(panel::AbstractPanel)
-  t = split(string(typeof(panel)), ".")[end]
-  "$(t)_$(string(panel.uid))"
-end
-
-function dotnode(io::IO, panel::AbstractPanel)
-  write(io, """  "$(dotID(panel))"\n""")
-end
-
-function dotnode(io::IO, panel::FinishedPanel)
-  write(io, """  "$(dotID(panel))"[shape=record; label="l: $(panel.length)|w: $(panel.width)"]\n""")
-end
-
-function dotnode(io::IO, panel::BoughtPanel)
-  write(io, """  "$(dotID(panel))"[shape=record; label="l: $(panel.length)|w: $(panel.width)|cost: $(panel.cost)"]\n""")
-end
-
-function dotnode(io::IO, panel::Panel)
-  from = if panel.cut_axis isa LengthAxis
-			"from end"
-		elseif panel.cut_axis isa WidthAxis
-			"from side"
-		end
-  write(io, """  "$(dotID(panel))"[label="$(panel.cut_at) $(from)"]\n""")
-end
-
-# Arcs are reversed so that they point from the panel being
-# cut to the results of that cut.
-function diarc(io::IO, from::AbstractPanel, to::AbstractPanel)
-  write(io, """  "$(dotID(to))" -> "$(dotID(from))"\n""")
-end
-
-function dotgraph(io::IO, panel::AbstractPanel, visited)::Nothing
-  if visited[panel]
-	return
-  end
-  visited[panel] = true
-  dotgraph1(io, panel, visited)
-end
-
-function dotgraph1(io::IO, panel::AbstractPanel, visited)::Nothing
-  dotnode(io, panel)
-  return nothing
-end
-
-function dotgraph1(io::IO, panel::FlippedPanel, visited)::Nothing
-  dotnode(io, panel)
-  diarc(io, panel, panel.was)
-  dotgraph(io, panel.was, visited)
-  return nothing
-end
-
-function dotgraph1(io::IO, panel::BoughtPanel, visited)::Nothing
-  dotnode(io, panel)
-  diarc(io, panel, panel.was)
-  dotgraph(io, panel.was, visited)
-  return nothing
-end
-
-function dotgraph1(io::IO, panel::Panel, visited)::Nothing
-  dotnode(io, panel)
-  diarc(io, panel, panel.cut_from)
-  dotgraph(io, panel.cut_from, visited)
-  return nothing
-end
-
-function dotgraph1(io::IO, panel::ScrappedPanel, visited)::Nothing
-  dotnode(io, panel)
-  diarc(io, panel, panel.was)
-  dotgraph(io, panel.was, visited)
-  return nothing
-end
-
-function dotgraph1(io::IO, panel::FinishedPanel, visited)::Nothing
-  dotnode(io, panel)
-  diarc(io, panel, panel.was)
-  diarc(io, panel, panel.wanted)
-  dotgraph(io, panel.was, visited)
-  dotgraph(io, panel.wanted, visited)
-  return nothing
-end
-
-end
 
 # ╔═╡ 58cd80ab-5a98-4b34-9bc2-a414d766a486
 md"""
@@ -1558,8 +1527,12 @@ md"""
 # ╠═738201a6-b769-4586-81cd-c8e73c9a6ad9
 # ╠═deb5d973-3fb6-48c9-87da-ed50eb4cd33d
 # ╠═c90350c2-9c91-43df-b7ed-2ed77f960e6d
+# ╟─4cd74059-f59b-46e4-be23-bfbd95e4d96d
+# ╠═f89c8f2e-8bdf-4d4e-8090-3f6a56e0ce85
 # ╟─dcbc9193-fa7a-435b-8f68-05b77e1d9b36
 # ╠═bd178f5d-7701-4a09-ba6d-0b80712bc3e2
+# ╟─6bafdc76-dd65-47a6-9c34-90353408c488
+# ╠═7408dbb2-f396-4e8f-9686-d7ac1a522647
 # ╟─58cd80ab-5a98-4b34-9bc2-a414d766a486
 # ╟─c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
 # ╠═4a9ebc9b-b91c-4ff6-ba55-2c32093044be
