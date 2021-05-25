@@ -1356,35 +1356,28 @@ begin
   function Base.showerror(io::IO, e::NonlocalTransfer)
     print(io, "NonlocalTransfer not caught!")
   end
-  
-  macro graphTransformerBody(bodyblock)
-	exittag = gensym("exittag")
-	addset = gensym("addset")
-	removeset = gensym("removeset")
-    esc(quote
-      let
-        $exittag = NonlocalTransfer()
-        $addset = Set()
-        $removeset = Set()
-	add(x) = push!($addset, x)
-	remove(x) = push!($removeset, x)
+
+  function transformingGraph(f)
+	addset = Set()
+	removeset = Set()
+	exittag = NonlocalTransfer()
+	add(arc) = push!(addset, arc)
+	remove(arc) = push!(removeset, arc)
 	function check(condition)
 	  if !condition
-	    throw($exittag)
-          end
-        end
+		throw(exittag)
+	  end
+	end
 	try
-	  $bodyblock
-        catch e
-          if e != $exittag
-            rethrow(e)
-          end
-        end
-        return $addset, $removeset
-      end
-	end)
+	  f(check, add, remove)
+	catch e
+	  if e != exittag
+		rethrow(e)
+	  end
+	end
+	return addset, removeset
   end
-  
+
 end
 
 # ╔═╡ 7408dbb2-f396-4e8f-9686-d7ac1a522647
@@ -1433,7 +1426,7 @@ begin
   CutNode wherever a panel is cut.
   """
   function addCutNodes(rpg::ReversePanelGraph, key)
-	@graphTransformerBody let
+	transformingGraph() do check, add, remove
 	  check(isa(key, CuttablePanel))
 	  arcs = havingKey(rpg, key)
 	  check(length(arcs) == 2)
@@ -1457,7 +1450,7 @@ begin
   
   """
   function elideTerminalPanels(rpg::ReversePanelGraph, terminal)
-    @graphTransformerBody let
+    transformingGraph() do check, add, remove
       check(terminal isa TerminalPanel)
       arcs2 = havingValue(rpg, terminal)
       check(length(arcs2) == 1)
@@ -1552,40 +1545,10 @@ begin
 
 end
 
-# ╔═╡ 3dc3f116-d7b8-439a-81ab-4138a9222b0d
-MacroTools.prewalk(MacroTools.rmlines, 
-@macroexpand( 	@graphTransformerBody let
-	  check(isa(key, CuttablePanel))
-	  arcs = havingKey(rpg, key)
-	  check(length(arcs1) == 2)
-	  check(arcs[1].second isa Panel)
-	  check(arcs[2].second isa Panel)
-	  check(key == arcs[1].second.cut_from)
-	  check(key == arcs[2].second.cut_from)
-      cutnode = CutNode(arcs[1].second, arcs[2].second)
-      add(key => cutnode)
-      remove(arcs[1])
-      remove(arcs[2])
-      add(cutnode => cutnode.panel1)
-      add(cutnode => cutnode.panel2)
-	end
-	)
-	)
-
 # ╔═╡ 58cd80ab-5a98-4b34-9bc2-a414d766a486
 md"""
 # Examples / Testing
 """
-
-# ╔═╡ 0a1685f2-f6d1-488d-bfd2-03766365ff53
-let
-	searcher = Searcher(wanda_box_panels[1:2])
-	run(searcher)
-	rpg = makeReversePanelGraph(searcher.cheapest)
-	tf(a) = transform!(rpg, a...)
-	keys(rpg) .|> (key -> (elideTerminalPanels(rpg, key))) #= .|> tf |> (
-		p -> Pair(dotID(p.first), dotID(p.second))) =#
-end
 
 # ╔═╡ e3f1b65c-1bb2-44ee-bbec-8bda4e1ae6c3
 let
@@ -1759,10 +1722,8 @@ md"""
 # ╠═bd178f5d-7701-4a09-ba6d-0b80712bc3e2
 # ╟─6bafdc76-dd65-47a6-9c34-90353408c488
 # ╠═b879cd1d-938a-4839-9c00-20d989ff5d45
-# ╠═3dc3f116-d7b8-439a-81ab-4138a9222b0d
 # ╠═7408dbb2-f396-4e8f-9686-d7ac1a522647
 # ╟─58cd80ab-5a98-4b34-9bc2-a414d766a486
-# ╠═0a1685f2-f6d1-488d-bfd2-03766365ff53
 # ╠═e3f1b65c-1bb2-44ee-bbec-8bda4e1ae6c3
 # ╟─c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
 # ╠═4a9ebc9b-b91c-4ff6-ba55-2c32093044be
