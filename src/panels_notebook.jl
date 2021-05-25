@@ -4,17 +4,15 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 5f5c5ef3-efed-4afd-b304-5b37a9a81bd2
-LOAD_PATH
-
 # ╔═╡ b019d660-9f77-11eb-1527-278a3e1b087c
 begin
-  #=
   using Pkg
   Pkg.activate(mktempdir())
-  Pkg.add([
-    Pkg.PackageSpec(name="Unitful", version="1.7.0"),
+  Pkg.add.([
+	# Unitful version constrained by UnitfulCurrency
+    Pkg.PackageSpec(name="Unitful", version="0.17.0"),
     Pkg.PackageSpec(name="UnitfulUS", version="0.2.0"),
+	Pkg.PackageSpec(name="UnitfulCurrency"),
     Pkg.PackageSpec(name="Match", version="1.1.0"),
     Pkg.PackageSpec(name="DataStructures", version="0.18.9"),
     Pkg.PackageSpec(name="DisplayAs", version="0.1.2"),
@@ -22,17 +20,20 @@ begin
                     path="c:/Users/Mark Nahabedian/.julia/dev/NativeSVG.jl"),
 	"MacroTools"
   ])
-=#
+
   using Unitful
   using UnitfulUS
   using Match
   using DataStructures
-  # using UnitfulCurrency   # trounble loading UnitfulCurrency
+  using UnitfulCurrency
   using NativeSVG
   using DisplayAs
   using UUIDs
   import MacroTools
 end
+
+# ╔═╡ 5f5c5ef3-efed-4afd-b304-5b37a9a81bd2
+LOAD_PATH
 
 # ╔═╡ 60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
 md"""
@@ -390,13 +391,13 @@ md"""
 begin    # Supplier Data
   KERF = (1/8)u"inch"
   
-  COST_PER_CUT = 1.50   # u"USD"
+  COST_PER_CUT = 1.50u"USD"
 
   const AVAILABLE_PANELS = [
-    AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", 95),
-    AvailablePanel("5 x 5 x 1/2", 5u"ft", 5u"ft", 49),
-    AvailablePanel("30 x 60 x 1/2", 30u"inch", 60u"inch", 30),
-    AvailablePanel("30 x 30 x 1/2", 30u"inch", 30u"inch", 19)
+    AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", 95u"USD"),
+    AvailablePanel("5 x 5 x 1/2", 5u"ft", 5u"ft", 49u"USD"),
+    AvailablePanel("30 x 60 x 1/2", 30u"inch", 60u"inch", 30u"USD"),
+    AvailablePanel("30 x 30 x 1/2", 30u"inch", 30u"inch", 19u"USD")
   ]
 end
 
@@ -723,7 +724,7 @@ An empty Tuple is returned if the cut can't be made.
 
 # Examples
 ```jldoctest
-julia> panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20))
+julia> panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20u"USD"))
 ...
 julia> panel2, panel3 = cut(panel1, LengthAxis(), 25u"inch")
 ...
@@ -776,7 +777,7 @@ end
 
 # ╔═╡ 952a3952-7632-4355-beea-ab064d4b374d
 begin
-  panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20))
+  panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20u"USD"))
 
   let
 	result = cut(panel1, LengthAxis(), 61u"inch")
@@ -840,7 +841,7 @@ begin
                          finished=Panels{FinishedPanel}([]),
                          scrapped=Panels{ScrappedPanel}([]),
                          working=Panels{CuttablePanel}([]),
-                         accumulated_cost=0)
+                         accumulated_cost=0u"USD")
 	  newstate = new(wanted, finished, scrapped, working, accumulated_cost)
 	  panels = AllOf(finished, scrapped, working)
 	  for i in 1:length(panels)
@@ -924,8 +925,7 @@ SearchPriority = Real
 function priority(state::SearchState)::SearchPriority
   # Priority should get worse as the cost increases but should get better
   # as we approach completion.
-  uconvert(Unitful.NoUnits,
-           (1 - doneness(state)) * state.accumulated_cost)
+  (1 - doneness(state)) * ustrip(Real, u"USD", state.accumulated_cost)
 end
 
 # ╔═╡ d90e2c72-9fdb-4f9e-94c8-7b211d2b16e3
@@ -1671,6 +1671,15 @@ md"""
 # ╔═╡ bb38f4c1-4443-4b33-a526-b5cc653f437b
 +(area.(Set(wanda_box_panels))...)
 
+# ╔═╡ 2b814578-5137-4805-bedf-2c7759d87048
+typeof(20u"USD")
+
+# ╔═╡ 7e368048-6a64-4439-8114-493f7f45ddfd
+20u"USD" isa Quantity{Real, CURRENCY}
+
+# ╔═╡ c4226ed8-d9a1-4bf5-bd6f-3f2484b19494
+typeof(CURRENCY)
+
 # ╔═╡ Cell order:
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
 # ╠═5f5c5ef3-efed-4afd-b304-5b37a9a81bd2
@@ -1690,7 +1699,7 @@ md"""
 # ╠═5176ae29-b9ac-4c20-82c2-2e054a32eecc
 # ╠═4fcb103c-fca4-4bd5-8d55-018bdf73a686
 # ╟─f6a43438-d7b0-442d-bb05-9e4488855665
-# ╟─65adef2d-9a53-4310-81a0-5dbb6d0918ca
+# ╠═65adef2d-9a53-4310-81a0-5dbb6d0918ca
 # ╟─8f925530-7e76-44f7-9557-64d4629a5e39
 # ╠═235e25dc-7139-4a24-861b-a0e7451a45eb
 # ╟─61e200af-6d6a-48c0-98e5-41b98dc2de9c
@@ -1720,7 +1729,7 @@ md"""
 # ╠═fc065401-50dc-4a21-98ad-b2ecd003d397
 # ╟─c72bb206-c7c6-4be6-8b92-446540edbea2
 # ╟─77b32e0e-fb41-4a2a-8b1d-a272e4a1dd60
-# ╟─81ffb853-ba0a-4513-b4e1-21f5c2327dc9
+# ╠═81ffb853-ba0a-4513-b4e1-21f5c2327dc9
 # ╟─d90e2c72-9fdb-4f9e-94c8-7b211d2b16e3
 # ╠═7b64474a-bbb1-4bc2-8f87-a35e4b168545
 # ╠═137932b7-b914-47f0-b355-2406c7dfe4a4
@@ -1761,3 +1770,6 @@ md"""
 # ╠═52956b53-22a2-47c2-bb8d-d70ea63dcff6
 # ╟─70685b9d-b660-4443-ae7f-a0659456dc4f
 # ╠═bb38f4c1-4443-4b33-a526-b5cc653f437b
+# ╠═2b814578-5137-4805-bedf-2c7759d87048
+# ╠═7e368048-6a64-4439-8114-493f7f45ddfd
+# ╠═c4226ed8-d9a1-4bf5-bd6f-3f2484b19494
