@@ -19,7 +19,8 @@ begin
     Pkg.PackageSpec(name="DataStructures", version="0.18.9"),
     Pkg.PackageSpec(name="DisplayAs", version="0.1.2"),
     Pkg.PackageSpec(; name="NativeSVG",
-                    path="c:/Users/Mark Nahabedian/.julia/dev/NativeSVG.jl")
+                    path="c:/Users/Mark Nahabedian/.julia/dev/NativeSVG.jl"),
+	"MacroTools"
   ])
 =#
   using Unitful
@@ -29,6 +30,8 @@ begin
   # using UnitfulCurrency   # trounble loading UnitfulCurrency
   using NativeSVG
   using DisplayAs
+  using UUIDs
+  import MacroTools
 end
 
 # ╔═╡ 60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
@@ -1074,6 +1077,12 @@ begin
 	Base.getindex(rpg::ReversePanelGraph, key) =
 		(p -> p.second).(filter(p -> p.first == key, rpg.arcs))
 
+	havingKey(rpg::ReversePanelGraph, key) =
+		filter(p -> p.first == key, rpg.arcs)
+	
+	havingValue(rpg::ReversePanelGraph, value) =
+		filter(p -> p.second == value, rpg.arcs)
+
 	function injest(rpg::ReversePanelGraph, panel::AbstractPanel)
 	end
 	
@@ -1101,6 +1110,13 @@ begin
 	function transform!(rpg::ReversePanelGraph, addarcs, removearcs)
 		setdiff!(rpg.arcs, removearcs)
 		union!(rpg.arcs, addarcs)
+		return nothing
+	end
+
+	function applyRule!(rpg::ReversePanelGraph, rule)
+	  nodes(rpg) .|>
+		(node -> rule(rpg, node)) .|>
+		(ar -> transform!(rpg, ar...))
 	end
 end
 
@@ -1326,6 +1342,51 @@ md"""
 The Panel Cut Graph is limited to describing starting and ending panels and the cuts that are made.  Irrelevant panels are elided.
 """
 
+# ╔═╡ b879cd1d-938a-4839-9c00-20d989ff5d45
+begin
+
+  struct NonlocalTransfer <: Exception
+    uid
+
+    function NonlocalTransfer()
+      new(UUIDs.uuid1())
+    end
+  end
+
+  function Base.showerror(io::IO, e::NonlocalTransfer)
+    print(io, "NonlocalTransfer not caught!")
+  end
+  
+  macro graphTransformerBody(bodyblock)
+	exittag = gensym("exittag")
+	addset = gensym("addset")
+	removeset = gensym("removeset")
+    esc(quote
+      let
+        $exittag = NonlocalTransfer()
+        $addset = Set()
+        $removeset = Set()
+	add(x) = push!($addset, x)
+	remove(x) = push!($removeset, x)
+	function check(condition)
+	  if !condition
+	    throw($exittag)
+          end
+        end
+	try
+	  $bodyblock
+        catch e
+          if e != $exittag
+            rethrow(e)
+          end
+        end
+        return $addset, $removeset
+      end
+	end)
+  end
+  
+end
+
 # ╔═╡ 7408dbb2-f396-4e8f-9686-d7ac1a522647
 begin
   struct PanelCutGraph
@@ -1334,8 +1395,8 @@ begin
 
     function PanelCutGraph(state::SearchState)
       pcg = new(state, makeReversePanelGraph(state))
-      doTransformation(pcg, addCutNodes)
-      doTransformation(pcg, elideTerminalPanels)
+	  applyRule!(pcg.rpg, addCutNodes)
+	  applyRule!(pcg.rpg, elideTerminalPanels)
       pcg
     end
   end
@@ -1366,40 +1427,28 @@ begin
     end
     return "cut $(n.panel1.cut_at) $(from)"
   end
-
+	
   md"""
   Compute the arguments to transform! in order to insert a
   CutNode wherever a panel is cut.
   """
-  function addCutNodes(pcg::PanelCutGraph, arc1::Pair, arc2::Pair)
-    add = Set()
-    remove = Set()
-    if arc1 == arc2
-      return add, remove
-    end
-    if arc1.first != arc2.first
-      return add, remove
-    end
-    if !(arc1.second isa Panel)
-      return add, remove
-    end
-    if !(arc2.second isa Panel)
-      return add, remove
-    end
-    if arc1.second == arc2.second
-      return add, remove
-    end
-	if arc1.second.uid >= arc2.second.uid
-	  # break pair argument symetry
-	  return add, remove
+  function addCutNodes(rpg::ReversePanelGraph, key)
+	@graphTransformerBody let
+	  check(isa(key, CuttablePanel))
+	  arcs = havingKey(rpg, key)
+	  check(length(arcs) == 2)
+	  arc1, arc2 = Tuple(arcs)
+	  check(arc1.second isa Panel)
+	  check(arc2.second isa Panel)
+	  check(key == arc1.second.cut_from)
+	  check(key == arc2.second.cut_from)
+      cutnode = CutNode(arc1.second, arc2.second)
+      add(key => cutnode)
+      remove(arc1)
+      remove(arc2)
+      add(cutnode => cutnode.panel1)
+      add(cutnode => cutnode.panel2)
 	end
-    cutnode = CutNode(arc1.second, arc2.second)
-    push!(add, arc1.first => cutnode)
-    push!(remove, arc1)
-    push!(remove, arc2)
-    push!(add, cutnode => cutnode.panel1)
-    push!(add, cutnode => cutnode.panel2)
-    return add, remove
   end
 
   md"""
@@ -1407,33 +1456,22 @@ begin
   succeeded by a TerminalPanel.
   
   """
-  function elideTerminalPanels(pcg::PanelCutGraph, arc1, arc2)
-    add = Set()
-    remove = Set()
-    if arc1 == arc2
-      return add, remove
+  function elideTerminalPanels(rpg::ReversePanelGraph, terminal)
+    @graphTransformerBody let
+      check(terminal isa TerminalPanel)
+      arcs2 = havingValue(rpg, terminal)
+      check(length(arcs2) == 1)
+	  arc2 = first(arcs2)
+      panel = arc2.first
+      check(panel isa Panel)
+      arcs1 = havingValue(rpg, panel)
+      check(length(arcs1) == 1)
+	  arc1 = first(arcs1)
+      precursor = arc1.first
+      add(precursor => terminal)
+      remove(arc1)
+      remove(arc2)
     end
-    if !(arc2.second isa TerminalPanel)
-      return add, remove
-    end
-    if arc1.second != arc2.first
-      return add, remove
-    end
-    push!(add, arc1.first => arc2.second)
-    push!(remove, arc1)
-    push!(remove, arc2)
-    return add, remove
-  end
-           
-  function doTransformation(pcg::PanelCutGraph, rule)
-    add = Set()
-    remove = Set()
-    for arc1 in pcg.rpg.arcs, arc2 in pcg.rpg.arcs
-      a, r = rule(pcg, arc1, arc2)
-      union!(add, a)
-      union!(remove, r)
-    end
-    transform!(pcg.rpg, add, remove)
   end
 
   function dotnodelabel(graph::PanelCutGraph, panel::BoughtPanel)::String
@@ -1514,10 +1552,51 @@ begin
 
 end
 
+# ╔═╡ 3dc3f116-d7b8-439a-81ab-4138a9222b0d
+MacroTools.prewalk(MacroTools.rmlines, 
+@macroexpand( 	@graphTransformerBody let
+	  check(isa(key, CuttablePanel))
+	  arcs = havingKey(rpg, key)
+	  check(length(arcs1) == 2)
+	  check(arcs[1].second isa Panel)
+	  check(arcs[2].second isa Panel)
+	  check(key == arcs[1].second.cut_from)
+	  check(key == arcs[2].second.cut_from)
+      cutnode = CutNode(arcs[1].second, arcs[2].second)
+      add(key => cutnode)
+      remove(arcs[1])
+      remove(arcs[2])
+      add(cutnode => cutnode.panel1)
+      add(cutnode => cutnode.panel2)
+	end
+	)
+	)
+
 # ╔═╡ 58cd80ab-5a98-4b34-9bc2-a414d766a486
 md"""
 # Examples / Testing
 """
+
+# ╔═╡ 0a1685f2-f6d1-488d-bfd2-03766365ff53
+let
+	searcher = Searcher(wanda_box_panels[1:2])
+	run(searcher)
+	rpg = makeReversePanelGraph(searcher.cheapest)
+	tf(a) = transform!(rpg, a...)
+	keys(rpg) .|> (key -> (elideTerminalPanels(rpg, key))) #= .|> tf |> (
+		p -> Pair(dotID(p.first), dotID(p.second))) =#
+end
+
+# ╔═╡ e3f1b65c-1bb2-44ee-bbec-8bda4e1ae6c3
+let
+	p1, p2 = cut(BoughtPanel(AVAILABLE_PANELS[1]), LengthAxis(), 10u"inch")
+	fp = FinishedPanel(p1, WantedPanel(length=10u"inch", width=p1.width, label="foo"))
+	sp = ScrappedPanel(was=p2)
+	rpg = ReversePanelGraph()
+	injest(rpg, fp)
+	injest(rpg, sp)
+	nodes(rpg) .|> (key -> (elideTerminalPanels(rpg, key)))
+end
 
 # ╔═╡ c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
 md"""
@@ -1679,8 +1758,12 @@ md"""
 # ╟─dcbc9193-fa7a-435b-8f68-05b77e1d9b36
 # ╠═bd178f5d-7701-4a09-ba6d-0b80712bc3e2
 # ╟─6bafdc76-dd65-47a6-9c34-90353408c488
+# ╠═b879cd1d-938a-4839-9c00-20d989ff5d45
+# ╠═3dc3f116-d7b8-439a-81ab-4138a9222b0d
 # ╠═7408dbb2-f396-4e8f-9686-d7ac1a522647
 # ╟─58cd80ab-5a98-4b34-9bc2-a414d766a486
+# ╠═0a1685f2-f6d1-488d-bfd2-03766365ff53
+# ╠═e3f1b65c-1bb2-44ee-bbec-8bda4e1ae6c3
 # ╟─c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
 # ╠═4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 # ╟─40eda0d7-3871-48d6-9976-e9dd7829265d
