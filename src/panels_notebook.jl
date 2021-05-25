@@ -1085,7 +1085,12 @@ begin
 
 	function injest(rpg::ReversePanelGraph, panel::AbstractPanel)
 	end
-	
+
+	function injest(rpg::ReversePanelGraph, panel::BoughtPanel)
+	  push!(rpg.arcs, (panel.was) => panel)
+	  injest(rpg, panel.was)
+	end
+
 	function injest(rpg::ReversePanelGraph, panel::TerminalPanel)
 		push!(rpg.arcs, (panel.was) => panel)
 		injest(rpg, panel.was)
@@ -1390,6 +1395,7 @@ begin
       pcg = new(state, makeReversePanelGraph(state))
 	  applyRule!(pcg.rpg, addCutNodes)
 	  applyRule!(pcg.rpg, elideTerminalPanels)
+	  applyRule!(pcg.rpg, elideBoughtPanels)
       pcg
     end
   end
@@ -1465,6 +1471,25 @@ begin
       remove(arc1)
       remove(arc2)
     end
+  end
+
+  md"""
+  Compute the arguments to transform! to elide BoughtPanels.
+	"""
+  function elideBoughtPanels(rpg::ReversePanelGraph, bought)
+	transformingGraph() do check, add, remove
+	  check(bought isa BoughtPanel)
+	  arcs1 = havingValue(rpg, bought)
+	  check(length(arcs1) == 1)
+	  arc1 = first(arcs1)
+	  check(arc1.first isa AvailablePanel)
+	  arcs2 = havingKey(rpg, bought)
+	  check(length(arcs2) == 1)
+	  arc2 = first(arcs2)
+	  remove(arc1)
+	  remove(arc2)
+	  add(arc1.first => arc2.second)
+	end
   end
 
   function dotnodelabel(graph::PanelCutGraph, panel::BoughtPanel)::String
