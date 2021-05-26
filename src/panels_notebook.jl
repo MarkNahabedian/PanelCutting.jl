@@ -356,10 +356,12 @@ begin
   label::String
   width::LengthType
   length::LengthType
-  cost
+  cost::Quantity{N, CURRENCY} where N
 end
 	
-function AvailablePanel(label::String, width::LengthType, length::LengthType, cost)
+function AvailablePanel(label::String,
+			width::LengthType, length::LengthType,
+			cost::Quantity{N, CURRENCY} where N)
   AvailablePanel(label=label, width=width, length=length, cost=cost)
 end
 		
@@ -458,7 +460,7 @@ struct Panel <: CuttablePanel
   cut_axis::Axis
   x::LengthType
   y::LengthType
-  cost
+  cost::Quantity{N, CURRENCY} where N
 
   function Panel(; length::LengthType, width::LengthType,
 			cut_from::CuttablePanel, cut_at::LengthType, cut_axis::Axis,
@@ -834,7 +836,7 @@ begin
     finished::Panels{FinishedPanel}
     scrapped::Panels{ScrappedPanel}
     working::Panels{CuttablePanel}
-    accumulated_cost
+    accumulated_cost::Quantity{N, CURRENCY} where N
 
     function SearchState(;
                          wanted=Panels{AbstractWantedPanel}([]),
@@ -1675,10 +1677,10 @@ md"""
 typeof(20u"USD")
 
 # ╔═╡ 7e368048-6a64-4439-8114-493f7f45ddfd
-20u"USD" isa Quantity{Real, CURRENCY}
+20u"USD" isa Quantity{N, CURRENCY} where N
 
-# ╔═╡ c4226ed8-d9a1-4bf5-bd6f-3f2484b19494
-typeof(CURRENCY)
+# ╔═╡ 4049d967-f932-4eec-b6fc-711a5df79531
+zero(Quantity{Real, CURRENCY})
 
 # ╔═╡ Cell order:
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
@@ -1772,4 +1774,4 @@ typeof(CURRENCY)
 # ╠═bb38f4c1-4443-4b33-a526-b5cc653f437b
 # ╠═2b814578-5137-4805-bedf-2c7759d87048
 # ╠═7e368048-6a64-4439-8114-493f7f45ddfd
-# ╠═c4226ed8-d9a1-4bf5-bd6f-3f2484b19494
+# ╠═4049d967-f932-4eec-b6fc-711a5df79531
