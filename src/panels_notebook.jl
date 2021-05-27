@@ -1504,6 +1504,29 @@ begin
               "}")
   end
 
+  function dotnodelabel(graph::PanelCutGraph, panel::AvailablePanel)::String
+    return *("{",
+			join(["$(split(string(typeof(panel)), ".")[end])",
+                    "l: $(panel.length)",
+                    "w: $(panel.width)",
+                    "cost: $(panel.cost)"],
+                   "|"),
+              "}")
+  end
+
+  function dotnodelabel(graph::PanelCutGraph, panel::FinishedPanel)::String
+    return *("{",
+			join(["$(split(string(typeof(panel)), ".")[end])",
+					"$(panel.label)",
+                    "l: $(panel.length)",
+                    "w: $(panel.width)",
+                    "x: $(panel.x)",
+                    "y: $(panel.y)",
+                    "cost: $(panel.cost)"],
+                   "|"),
+              "}")
+  end
+
   function dotnodelabel(graph::PanelCutGraph, panel::AbstractPanel)::String
     return *("{",
 			join(["$(split(string(typeof(panel)), ".")[end])",
