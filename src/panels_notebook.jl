@@ -945,6 +945,7 @@ md"""
 # ╔═╡ 7b64474a-bbb1-4bc2-8f87-a35e4b168545
 mutable struct Searcher
   available_stock::Vector{AvailablePanel}
+  wanted::Vector{<:AbstractWantedPanel}
   states::PriorityQueue{SearchState, SearchPriority}
   finished_states::Set{SearchState}
   cheapest::Union{SearchState, Nothing}
@@ -954,7 +955,7 @@ mutable struct Searcher
   function Searcher(want::Vector{<:AbstractWantedPanel};
                     available=AVAILABLE_PANELS)
     initial_state = SearchState(want)
-    new(available,
+    new(available, want,
         PriorityQueue{SearchState, SearchPriority}(
           initial_state => priority(initial_state)),
         Set{SearchState}(),
@@ -1618,6 +1619,89 @@ function plot_doneness_to_cost(searcher::Searcher)
   scatter(costs, done)
 end
 
+# ╔═╡ 1ea2113a-27f1-427a-a78e-23ef4bf52b33
+md"""
+# Report
+
+Generate an HTML fragment that provides a detailed report of our cut search and results.
+"""
+
+# ╔═╡ c1d12f43-5f40-4919-8ea4-ef18f346de06
+begin
+	function uniqueWantedPanels(panels)
+		result = []
+		have = []
+		# Consider just FlippedPanels first:
+		for flipped in filter(p -> p isa FlippedPanel, panels)
+			push!(result, flipped)
+			push!(have, flipped)
+			push!(have, flipped.was)
+		end
+		# Now include any WantedPanels that are not also flipped:
+		for wanted in filter(p -> p isa WantedPanel, panels)
+			if wanted in have
+				continue
+			end
+			push!(result, wanted)
+			push!(have, wanted)
+		end
+		return result
+	end
+end
+
+# ╔═╡ f8b1780e-9614-4414-93e1-205233d3fb16
+function report(searcher::Searcher)
+	io = IOBuffer()
+	function elt(f, io, tagname; attrs...)
+		NativeSVG.element(f, tagname, io, attrs...)
+	end
+	elt(io, :div) do
+		elt(io, :h2) do
+			write(io, "Panel Cut Report")
+		end
+		elt(io, :p) do
+			write(io, "Report of what stock to purchase and what" *
+				" cuts to make to get panels of these aizes")
+		end
+		elt(io, :table) do
+			elt(io, :thread) do
+				elt(io, :tr) do
+					for heading in ("Label", "Length", "Width", "Ok to Flip?")
+						elt(io, :th) do
+							write(io, heading)
+						end
+					end
+				end
+			end
+			elt(io, :tbody) do
+				for panel in uniqueWantedPanels(searcher.wanted)
+					function td(val)
+						elt(io, :td) do
+							show(io, val)
+						end
+					end
+					elt(io, :tr) do
+						td(panel.label)
+						td(panel.length)
+						td(panel.width)
+						td(if panel isa FlippedPanel
+								"yes"
+							else
+								"no"
+							end)
+					end
+				end
+			end
+		end
+		elt(io, :p) do
+			write(io, "The best solution has a cost of " *
+				"$(searcher.cheapest.accumulated_cost).")
+		end
+		toSVG(io, searcher.cheapest)
+	end
+	return HTML(String(take!(io)))
+end
+
 # ╔═╡ 58cd80ab-5a98-4b34-9bc2-a414d766a486
 md"""
 # Examples / Testing
@@ -1645,12 +1729,7 @@ let
   run(searcher)
   rundot(dotgraph("ex1.dot", searcher.cheapest))
   rundot(dotgraph("ex1cut.dot", PanelCutGraph(searcher.cheapest)))
-  foo = toSVG(searcher.cheapest)
-  if true
-	DisplayAs.SVG(Drawing(foo))
-  else
-    String(foo)
-  end
+  report(searcher)
 end
 
 # ╔═╡ 40eda0d7-3871-48d6-9976-e9dd7829265d
@@ -1665,12 +1744,7 @@ let
 	# @assert length(searcher.cheapest.finished) == length(wanda_box_panels)
 	rundot(dotgraph("ex2.dot", searcher.cheapest))
 	rundot(dotgraph("ex2cut.dot", PanelCutGraph(searcher.cheapest)))
-	foo = toSVG(searcher.cheapest)
-    if true
-   	  DisplayAs.SVG(Drawing(foo))
-    else
-      String(foo)
-    end
+	report(searcher)
 end
 
 # ╔═╡ a968cf5a-bed4-4939-980f-86e90903b756
@@ -1684,12 +1758,7 @@ let
 	run(searcher)
 	rundot(dotgraph("ex3.dot", searcher.cheapest))
 	rundot(dotgraph("ex3cut.dot", PanelCutGraph(searcher.cheapest)))
-	foo = toSVG(searcher.cheapest)
-    if true
-   	  DisplayAs.SVG(Drawing(foo))
-    else
-      String(foo)
-	end
+	report(searcher)
 end
 
 # ╔═╡ 2d6b3e56-0858-4b7a-9bd7-5d5fa2b835c9
@@ -1806,6 +1875,9 @@ zero(Quantity{Real, CURRENCY})
 # ╠═7408dbb2-f396-4e8f-9686-d7ac1a522647
 # ╟─75012d46-535c-4d51-9948-f3c611c7a72c
 # ╠═9b16e856-dd32-400c-833a-cc2a3db5bf92
+# ╟─1ea2113a-27f1-427a-a78e-23ef4bf52b33
+# ╠═c1d12f43-5f40-4919-8ea4-ef18f346de06
+# ╠═f8b1780e-9614-4414-93e1-205233d3fb16
 # ╟─58cd80ab-5a98-4b34-9bc2-a414d766a486
 # ╠═e3f1b65c-1bb2-44ee-bbec-8bda4e1ae6c3
 # ╟─c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
