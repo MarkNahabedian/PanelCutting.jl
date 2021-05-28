@@ -18,8 +18,10 @@ begin
     Pkg.PackageSpec(name="DisplayAs", version="0.1.2"),
     Pkg.PackageSpec(; name="NativeSVG",
                     path="c:/Users/Mark Nahabedian/.julia/dev/NativeSVG.jl"),
-	"MacroTools"
-  ])
+	"MacroTools",
+	"Plots",
+	# "BackendPackage"
+	])
 
   using Unitful
   using UnitfulUS
@@ -29,6 +31,7 @@ begin
   using NativeSVG
   using DisplayAs
   using UUIDs
+  using Plots
   import MacroTools
 end
 
@@ -1040,6 +1043,12 @@ function run(searcher::Searcher)
   end
 end
 
+# ╔═╡ 673904ce-42d2-44d8-93c4-cdc59d1e9392
+function allstates(searcher::Searcher)
+	union(searcher.finished_states,
+	      keys(searcher.states))
+end
+
 # ╔═╡ df84b1ad-cbd5-4f7b-a37e-30534b17adcf
 md"""
 # Reverse Graph
@@ -1209,7 +1218,7 @@ function panelrect(io::IO, panel::AbstractPanel, cssclass::String)
 		  end
 		end
 		if panel isa FinishedPanel
-		  text(io;
+		  NativeSVG.text(io;
 				class = cssclass,
 				x = svgdistance(panel.x + panel.length / 2),
 				y = svgdistance(panel.y + panel.width / 2)) do
@@ -1595,6 +1604,20 @@ begin
 
 end
 
+# ╔═╡ 75012d46-535c-4d51-9948-f3c611c7a72c
+md"""
+# Plots
+"""
+
+# ╔═╡ 9b16e856-dd32-400c-833a-cc2a3db5bf92
+function plot_doneness_to_cost(searcher::Searcher)
+  as = allstates(searcher)
+  costs = (s -> s.accumulated_cost).(as)
+  costs = (c -> ustrip(Real, u"USD", c)).(costs)
+  done = doneness.(as)
+  scatter(costs, done)
+end
+
 # ╔═╡ 58cd80ab-5a98-4b34-9bc2-a414d766a486
 md"""
 # Examples / Testing
@@ -1667,8 +1690,6 @@ let
     else
       String(foo)
 	end
-	# (x -> "$(dotID(x.first)) => $(dotID(x.second))").(PanelCutGraph(searcher.cheapest).rpg.arcs)
-	# (x -> "$(dotID(x.first)) => $(dotID(x.second))").(makeReversePanelGraph(searcher.cheapest).arcs)
 end
 
 # ╔═╡ 2d6b3e56-0858-4b7a-9bd7-5d5fa2b835c9
@@ -1760,6 +1781,7 @@ zero(Quantity{Real, CURRENCY})
 # ╠═137932b7-b914-47f0-b355-2406c7dfe4a4
 # ╠═5aac7456-b32f-40e8-a015-fcbea6f638ff
 # ╠═4e51fc12-7f05-49e2-b55a-7d91c47dd185
+# ╠═673904ce-42d2-44d8-93c4-cdc59d1e9392
 # ╟─df84b1ad-cbd5-4f7b-a37e-30534b17adcf
 # ╠═148e3f7f-4ac6-4e57-be5d-fb4082bf1154
 # ╟─85f95152-93a2-42cd-80f3-c3d7d931dbfe
@@ -1782,6 +1804,8 @@ zero(Quantity{Real, CURRENCY})
 # ╟─6bafdc76-dd65-47a6-9c34-90353408c488
 # ╠═b879cd1d-938a-4839-9c00-20d989ff5d45
 # ╠═7408dbb2-f396-4e8f-9686-d7ac1a522647
+# ╟─75012d46-535c-4d51-9948-f3c611c7a72c
+# ╠═9b16e856-dd32-400c-833a-cc2a3db5bf92
 # ╟─58cd80ab-5a98-4b34-9bc2-a414d766a486
 # ╠═e3f1b65c-1bb2-44ee-bbec-8bda4e1ae6c3
 # ╟─c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
