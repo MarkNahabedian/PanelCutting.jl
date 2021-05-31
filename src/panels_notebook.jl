@@ -23,6 +23,7 @@ begin
 	# "BackendPackage"
 	])
 
+  using Printf
   using Unitful
   using UnitfulUS
   using Match
@@ -1706,16 +1707,16 @@ function report(searcher::Searcher;
                 write(io, heading)
             end
         end
-        function td(io, val)
-            elt(io, :td) do
-				if val isa String
-					write(io, val)
-				else
-                	show(io, val)
-				end
+        function td(io, val; attrs...)
+            elt(io, :td; attrs...) do
+		if val isa String
+		    write(io, val)
+		else
+                    show(io, val)
+		end
             end
         end
-		# Table of wanted panels:
+	# Table of wanted panels:
         elt(io, :table) do
             elt(io, :thread) do
                 elt(io, :tr) do
@@ -1727,14 +1728,15 @@ function report(searcher::Searcher;
             elt(io, :tbody) do
                 for panel in uniqueWantedPanels(searcher.wanted)
                     elt(io, :tr) do
-                        td(io, panel.label)
-                        td(io, panel.length)
-                        td(io, panel.width)
+                        td(io, panel.label; align="center")
+                        td(io, panel.length; align="right")
+                        td(io, panel.width; align="right")
                         td(io, if panel isa FlippedPanel
                                "yes"
                            else
                                "no"
-                           end)
+			   end;
+			   align="center")
                     end
                 end
             end
@@ -1758,16 +1760,17 @@ function report(searcher::Searcher;
                     function panel_group(panels)
                         for p in panels
                             elt(io, :tr; style=style) do
-                                td(io, p.label)
-                                td(io, area(p))
-                                td(io, "$(100*area(p)/bought_area)%")
+                                td(io, p.label; align="center")
+                                td(io, area(p); align="right")
+                                td(io, @sprintf("%.2f%%",
+						100 * area(p)/bought_area);
+				   align="right")
                                 if p == panels[1]
-                                    elt(io, :td;
-										rowspan=length(panels),
-										valign="top") do
-										frac = sum(area.(panels))/bought_area
-										write(io, "$(100*frac)%")
-                                    end
+				    frac = sum(area.(panels)) / bought_area
+				    td(io, @sprintf("%.2f%%", 100 * frac);
+				       rowspan=length(panels),
+				       valign="top",
+				       align="right")
                                 end
                             end
                         end
