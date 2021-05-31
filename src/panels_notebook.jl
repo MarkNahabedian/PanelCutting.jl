@@ -501,7 +501,7 @@ begin
 		:y       => was.y
 		:length  => was.length
 		:width   => was.width
-		:label   => "scrapped from $(was.label)"
+		:label   => "scrapped $(panel.uid)"
 		:cost    => was.cost
 		_        => getfield(panel, prop)
 	end
@@ -572,7 +572,7 @@ md"""
 
 # ╔═╡ 65f4609e-5d6f-4ba6-a941-45c42ac396b4
 begin
-  Panels{T} = Tuple{Vararg{T}}
+  Panels{T} = Tuple{Vararg{T}} where T <: AbstractPanel
 end
 
 # ╔═╡ a10f122d-fe66-4523-8322-6907481a096f
@@ -836,6 +836,7 @@ begin
   struct SearchState
     # panels are removed from wanten once they are finished.
     wanted::Panels{AbstractWantedPanel}
+    bought::Panels{BoughtPanel}
     finished::Panels{FinishedPanel}
     scrapped::Panels{ScrappedPanel}
     working::Panels{CuttablePanel}
@@ -843,11 +844,12 @@ begin
 
     function SearchState(;
                          wanted=Panels{AbstractWantedPanel}([]),
+                         bought=Panels{BoughtPanel}([]),
                          finished=Panels{FinishedPanel}([]),
                          scrapped=Panels{ScrappedPanel}([]),
                          working=Panels{CuttablePanel}([]),
                          accumulated_cost=0u"USD")
-	  newstate = new(wanted, finished, scrapped, working, accumulated_cost)
+	  newstate = new(wanted, bought, finished, scrapped, working, accumulated_cost)
 	  panels = AllOf(finished, scrapped, working)
 	  for i in 1:length(panels)
 		for j in i+1:length(panels)
@@ -869,6 +871,12 @@ begin
 		       finished::Union{Nothing, FinishedPanel},
                        used::Union{Nothing, CuttablePanel},
 		       offcuts::CuttablePanel...)
+	newly_bought = filter(x -> x isa BoughtPanel, offcuts)
+	bought = if length(newly_bought) == 0
+		precursor.bought
+	else
+		Panels{BoughtPanel}([precursor.bought..., newly_bought...])
+	end
     wanted = if finished == nothing
       precursor.wanted
     else
@@ -891,6 +899,7 @@ begin
     end
     state = SearchState(;
 		        wanted=wanted,
+		        bought=bought,
 		        finished=if finished == nothing
                           precursor.finished
                         else
@@ -912,6 +921,9 @@ begin
     return finished / (finished + a(state.wanted))
   end
 end
+
+# ╔═╡ 042388f8-d557-4e9c-b9a8-71865563ffac
+
 
 # ╔═╡ fc065401-50dc-4a21-98ad-b2ecd003d397
 SearchState(; wanted=Panels{AbstractWantedPanel}(sort(wanda_box_panels; by=major)))
@@ -1675,70 +1687,113 @@ end
 
 # ╔═╡ f8b1780e-9614-4414-93e1-205233d3fb16
 function report(searcher::Searcher;
-		includeCutDiagram=true,
-	        includeCutGraph=true)
-  io = IOBuffer()
-  function elt(f, io, tagname; attrs...)
-    NativeSVG.element(f, tagname, io, attrs...)
-  end
-  elt(io, :div) do
-    elt(io, :h2) do
-      write(io, "Panel Cut Report")
+                includeCutDiagram=true,
+                includeCutGraph=true)
+    io = IOBuffer()
+    function elt(f, io, tagname; attrs...)
+        NativeSVG.element(f, tagname, io; attrs...)
     end
-    elt(io, :p) do
-      write(io, "Report of what stock to purchase and what" *
-	" cuts to make to get panels of these aizes")
+    elt(io, :div) do
+        elt(io, :h2) do
+            write(io, "Panel Cut Report")
+        end
+        elt(io, :p) do
+            write(io, "Report of what stock to purchase and what" *
+                " cuts to make to get panels of these aizes")
+        end
+        function th(io, heading)
+            elt(io, :th) do
+                write(io, heading)
+            end
+        end
+        function td(io, val)
+            elt(io, :td) do
+				if val isa String
+					write(io, val)
+				else
+                	show(io, val)
+				end
+            end
+        end
+		# Table of wanted panels:
+        elt(io, :table) do
+            elt(io, :thread) do
+                elt(io, :tr) do
+                    for heading in ("Label", "Length", "Width", "Ok to Flip?")
+                        th(io, heading)
+                    end
+                end
+            end
+            elt(io, :tbody) do
+                for panel in uniqueWantedPanels(searcher.wanted)
+                    elt(io, :tr) do
+                        td(io, panel.label)
+                        td(io, panel.length)
+                        td(io, panel.width)
+                        td(io, if panel isa FlippedPanel
+                               "yes"
+                           else
+                               "no"
+                           end)
+                    end
+                end
+            end
+        end
+        elt(io, :p) do
+            write(io, "The best solution has a cost of " *
+                "$(searcher.cheapest.accumulated_cost).")
+        end
+        # Table of panel areas
+        elt(io, :div) do
+            elt(io, :table) do
+                elt(io, :thread) do
+                    elt(io, :tr) do
+                        th(io, "Panel")
+                        th(io, "Area")
+                        th(io, "%")
+                    end
+                end
+                elt(io, :tbody) do
+                    bought_area = sum(area.(searcher.cheapest.bought))
+                    function panel_group(panels)
+                        for p in panels
+                            elt(io, :tr; style=style) do
+                                td(io, p.label)
+                                td(io, area(p))
+                                td(io, "$(100*area(p)/bought_area)%")
+                                if p == panels[1]
+                                    elt(io, :td;
+										rowspan=length(panels),
+										valign="top") do
+										frac = sum(area.(panels))/bought_area
+										write(io, "$(100*frac)%")
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    panel_group(searcher.cheapest.bought)
+                    panel_group(searcher.cheapest.scrapped)
+                    panel_group(searcher.cheapest.finished)
+                end
+            end
+        end
+        if includeCutDiagram
+            toSVG(io, searcher.cheapest)
+        end
+        if includeCutGraph
+            elt(io, :div) do
+                dot, err = runCmd(`dot -Tsvg`, io)
+                dotgraph(dot, PanelCutGraph(searcher.cheapest))
+                close(dot)
+                err = read(err)
+                if length(err) > 0
+                    throw(Exception("Error running dot: $err"))
+                end
+            end
+        end
     end
-    elt(io, :table) do
-      elt(io, :thread) do
-	elt(io, :tr) do
-	  for heading in ("Label", "Length", "Width", "Ok to Flip?")
-	    elt(io, :th) do
-	      write(io, heading)
-	    end
-	  end
-	end
-      end
-      elt(io, :tbody) do
-	for panel in uniqueWantedPanels(searcher.wanted)
-	  function td(val)
-	    elt(io, :td) do
-	      show(io, val)
-	    end
-	  end
-	  elt(io, :tr) do
-	    td(panel.label)
-	    td(panel.length)
-	    td(panel.width)
-	    td(if panel isa FlippedPanel
-		 "yes"
-	       else
-		 "no"
-	       end)
-	  end
-	end
-      end
-    end
-    elt(io, :p) do
-      write(io, "The best solution has a cost of " *
-	"$(searcher.cheapest.accumulated_cost).")
-    end
-    if includeCutDiagram
-      toSVG(io, searcher.cheapest)
-    end
-    if includeCutGraph
-      elt(io, :div) do
-		dot, err = runCmd(`dot -Tsvg`, io)
-		dotgraph(dot, PanelCutGraph(searcher.cheapest))
-		close(dot)
-		err = read(err)
-		if length(err) > 0
-			throw(Exception("Error running dot: $err"))
-		end
-	  end
-	end
-  end
-  return HTML(String(take!(io)))
+    return HTML(String(take!(io)))
 end
 
 # ╔═╡ 58cd80ab-5a98-4b34-9bc2-a414d766a486
@@ -1880,6 +1935,7 @@ zero(Quantity{Real, CURRENCY})
 # ╟─966f82be-7fdf-44d2-9c9f-3e27c19aef89
 # ╟─1fec8fd3-fc4a-4efc-9d03-16b050c22926
 # ╠═ed05bfa9-995a-422b-9ccb-215b5535723e
+# ╠═042388f8-d557-4e9c-b9a8-71865563ffac
 # ╠═fc065401-50dc-4a21-98ad-b2ecd003d397
 # ╟─c72bb206-c7c6-4be6-8b92-446540edbea2
 # ╟─77b32e0e-fb41-4a2a-8b1d-a272e4a1dd60
