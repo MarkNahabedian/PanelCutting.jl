@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.4
+# v0.14.7
 
 using Markdown
 using InteractiveUtils
@@ -1649,57 +1649,96 @@ begin
 	end
 end
 
+# ╔═╡ 0d804f8e-838a-49a0-983e-d517d7588f56
+cat = `"c:/Program Files/Git/usr/bin/cat.exe"`
+
+# ╔═╡ 2883b685-b394-408f-b1ec-eb4804ead5f8
+"""
+    runCmd(cmd::Cmd, cmdOutput::IO)::IO
+Run the external command `cmd`, which will write output to `cmdOutput`.
+The stream that's returns can be written to to provide inoput to the
+command.  The second return value is the stderr stream.
+"""
+function runCmd(cmd::Cmd, cmdOutput::IO)
+	cmdInput = Pipe()
+	err = Pipe()
+	proc = Base.run(pipeline(cmd,
+			stdin=cmdInput,
+			stdout=cmdOutput,
+			stderr=err),
+		wait=false)
+	process_running(proc) || throw(Exception("Problem starting $cmd"))
+	close(cmdInput.out)
+	close(err.in)
+	return cmdInput, err
+end
+
 # ╔═╡ f8b1780e-9614-4414-93e1-205233d3fb16
-function report(searcher::Searcher)
-	io = IOBuffer()
-	function elt(f, io, tagname; attrs...)
-		NativeSVG.element(f, tagname, io, attrs...)
+function report(searcher::Searcher;
+		includeCutDiagram=true,
+	        includeCutGraph=true)
+  io = IOBuffer()
+  function elt(f, io, tagname; attrs...)
+    NativeSVG.element(f, tagname, io, attrs...)
+  end
+  elt(io, :div) do
+    elt(io, :h2) do
+      write(io, "Panel Cut Report")
+    end
+    elt(io, :p) do
+      write(io, "Report of what stock to purchase and what" *
+	" cuts to make to get panels of these aizes")
+    end
+    elt(io, :table) do
+      elt(io, :thread) do
+	elt(io, :tr) do
+	  for heading in ("Label", "Length", "Width", "Ok to Flip?")
+	    elt(io, :th) do
+	      write(io, heading)
+	    end
+	  end
 	end
-	elt(io, :div) do
-		elt(io, :h2) do
-			write(io, "Panel Cut Report")
-		end
-		elt(io, :p) do
-			write(io, "Report of what stock to purchase and what" *
-				" cuts to make to get panels of these aizes")
-		end
-		elt(io, :table) do
-			elt(io, :thread) do
-				elt(io, :tr) do
-					for heading in ("Label", "Length", "Width", "Ok to Flip?")
-						elt(io, :th) do
-							write(io, heading)
-						end
-					end
-				end
-			end
-			elt(io, :tbody) do
-				for panel in uniqueWantedPanels(searcher.wanted)
-					function td(val)
-						elt(io, :td) do
-							show(io, val)
-						end
-					end
-					elt(io, :tr) do
-						td(panel.label)
-						td(panel.length)
-						td(panel.width)
-						td(if panel isa FlippedPanel
-								"yes"
-							else
-								"no"
-							end)
-					end
-				end
-			end
-		end
-		elt(io, :p) do
-			write(io, "The best solution has a cost of " *
-				"$(searcher.cheapest.accumulated_cost).")
-		end
-		toSVG(io, searcher.cheapest)
+      end
+      elt(io, :tbody) do
+	for panel in uniqueWantedPanels(searcher.wanted)
+	  function td(val)
+	    elt(io, :td) do
+	      show(io, val)
+	    end
+	  end
+	  elt(io, :tr) do
+	    td(panel.label)
+	    td(panel.length)
+	    td(panel.width)
+	    td(if panel isa FlippedPanel
+		 "yes"
+	       else
+		 "no"
+	       end)
+	  end
 	end
-	return HTML(String(take!(io)))
+      end
+    end
+    elt(io, :p) do
+      write(io, "The best solution has a cost of " *
+	"$(searcher.cheapest.accumulated_cost).")
+    end
+    if includeCutDiagram
+      toSVG(io, searcher.cheapest)
+    end
+    if includeCutGraph
+      elt(io, :div) do
+		dot, err = runCmd(`dot -Tsvg`, io)
+		dotgraph(dot, PanelCutGraph(searcher.cheapest))
+		close(dot)
+		err = read(err)
+		if length(err) > 0
+			throw(Exception("Error running dot: $err"))
+		end
+	  end
+	end
+  end
+  return HTML(String(take!(io)))
 end
 
 # ╔═╡ 58cd80ab-5a98-4b34-9bc2-a414d766a486
@@ -1878,6 +1917,8 @@ zero(Quantity{Real, CURRENCY})
 # ╟─1ea2113a-27f1-427a-a78e-23ef4bf52b33
 # ╠═c1d12f43-5f40-4919-8ea4-ef18f346de06
 # ╠═f8b1780e-9614-4414-93e1-205233d3fb16
+# ╠═0d804f8e-838a-49a0-983e-d517d7588f56
+# ╠═2883b685-b394-408f-b1ec-eb4804ead5f8
 # ╟─58cd80ab-5a98-4b34-9bc2-a414d766a486
 # ╠═e3f1b65c-1bb2-44ee-bbec-8bda4e1ae6c3
 # ╟─c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
