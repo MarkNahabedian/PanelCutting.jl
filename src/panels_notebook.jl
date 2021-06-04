@@ -576,6 +576,19 @@ begin
   Panels{T} = Tuple{Vararg{T}} where T <: AbstractPanel
 end
 
+# ╔═╡ da3816af-531f-4eaa-90bd-b187f80b54a6
+begin
+
+  function flipped(panels::Panels{WantedPanel})
+    collect(Iterators.flatten(flipped.(panels)))
+  end
+
+  function flipped(panels::Vector{WantedPanel})
+    collect(Iterators.flatten(flipped.(panels)))
+   end
+
+end
+
 # ╔═╡ a10f122d-fe66-4523-8322-6907481a096f
 md"""
 ## Progenitor
@@ -1822,10 +1835,8 @@ md"""
 
 # ╔═╡ 4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 let
-  searcher = Searcher(wanda_box_panels[1:2])
+  searcher = Searcher(flipped(wanda_box_panels))
   run(searcher)
-  rundot(dotgraph("ex1.dot", searcher.cheapest))
-  rundot(dotgraph("ex1cut.dot", PanelCutGraph(searcher.cheapest)))
   report(searcher)
 end
 
@@ -1838,9 +1849,7 @@ md"""
 let
 	searcher = Searcher(wanda_box_panels)
 	run(searcher)
-	# @assert length(searcher.cheapest.finished) == length(wanda_box_panels)
-	rundot(dotgraph("ex2.dot", searcher.cheapest))
-	rundot(dotgraph("ex2cut.dot", PanelCutGraph(searcher.cheapest)))
+	@assert length(searcher.cheapest.finished) == length(wanda_box_panels)
 	report(searcher)
 end
 
@@ -1853,8 +1862,6 @@ md"""
 let
 	searcher = Searcher(collect(Iterators.flatten(flipped.(wanda_box_panels))))
 	run(searcher)
-	rundot(dotgraph("ex3.dot", searcher.cheapest))
-	rundot(dotgraph("ex3cut.dot", PanelCutGraph(searcher.cheapest)))
 	report(searcher)
 end
 
@@ -1906,6 +1913,7 @@ zero(Quantity{Real, CURRENCY})
 # ╠═34bab1fd-ecdc-4054-8c69-5325ae807e1f
 # ╟─7c51768d-f376-487c-a88d-f795fb01da48
 # ╠═594a5dc5-77cc-4610-8ae0-2ee54abb1d4b
+# ╠═da3816af-531f-4eaa-90bd-b187f80b54a6
 # ╠═ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─adb89a84-5223-42db-90d5-8703b2d9a3b7
 # ╠═5176ae29-b9ac-4c20-82c2-2e054a32eecc
