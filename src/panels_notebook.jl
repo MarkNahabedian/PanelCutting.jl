@@ -1835,7 +1835,7 @@ md"""
 
 # ╔═╡ 4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 let
-  searcher = Searcher(flipped(wanda_box_panels))
+  searcher = Searcher(wanda_box_panels[1:2])
   run(searcher)
   report(searcher)
 end
@@ -1860,7 +1860,7 @@ md"""
 
 # ╔═╡ 81b8240b-e3c0-427d-b57a-b07e52963f15
 let
-	searcher = Searcher(collect(Iterators.flatten(flipped.(wanda_box_panels))))
+	searcher = Searcher(flipped(wanda_box_panels))
 	run(searcher)
 	report(searcher)
 end
