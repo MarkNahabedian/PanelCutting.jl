@@ -306,9 +306,9 @@ begin
 
   function flipped(panel::WantedPanel)
 	if panel.length == panel.width
-	  return (panel,)
+	  return panel
 	end
-    return (panel, FlippedPanel(panel))
+    return FlippedPanel(panel)
   end
 
   wantsmatch(p1::WantedPanel, p2::WantedPanel) = p1 == p2
@@ -318,7 +318,8 @@ begin
 
   # Testing
   let
-    w, f = flipped(WantedPanel(width=1u"inch", length=2u"inch", label="foo"))
+    w = WantedPanel(width=1u"inch", length=2u"inch", label="foo")
+	f = flipped(w)
     @assert w.length == f.width
     @assert w.width == f.length
     @assert setdiff(Set(propertynames(f)), Set(propertynames(w))) == Set((:was,))
@@ -326,9 +327,9 @@ begin
     @assert wantsmatch(f, f)
 	@assert wantsmatch(w, f)
 	@assert wantsmatch(f, w)
-	@assert length(flipped(WantedPanel(width=10u"inch",
+	@assert flipped(WantedPanel(width=10u"inch",
 					length=10u"inch",
-					label="square"))) == 1
+					label="square")) isa WantedPanel
 	
   end
 end
@@ -343,6 +344,29 @@ begin
     WantedPanel(length=22u"inch", width=30u"inch", label="bottom")
   ]
   sort(wanda_box_panels; lt=smaller, rev=true)
+end
+
+# ╔═╡ 7e29ad94-89c1-4903-8099-52b258a7a622
+begin
+	function uniqueWantedPanels(panels)::Vector{AbstractWantedPanel}
+		result = Vector{AbstractWantedPanel}()
+		have = []
+		# Consider just FlippedPanels first:
+		for flipped in filter(p -> p isa FlippedPanel, panels)
+			push!(result, flipped)
+			push!(have, flipped)
+			push!(have, flipped.was)
+		end
+		# Now include any WantedPanels that are not also flipped:
+		for wanted in filter(p -> p isa WantedPanel, panels)
+			if wanted in have
+				continue
+			end
+			push!(result, wanted)
+			push!(have, wanted)
+		end
+		return result
+	end
 end
 
 # ╔═╡ adb89a84-5223-42db-90d5-8703b2d9a3b7
@@ -574,19 +598,6 @@ md"""
 # ╔═╡ 65f4609e-5d6f-4ba6-a941-45c42ac396b4
 begin
   Panels{T} = Tuple{Vararg{T}} where T <: AbstractPanel
-end
-
-# ╔═╡ da3816af-531f-4eaa-90bd-b187f80b54a6
-begin
-
-  function flipped(panels::Panels{WantedPanel})
-    collect(Iterators.flatten(flipped.(panels)))
-  end
-
-  function flipped(panels::Vector{WantedPanel})
-    collect(Iterators.flatten(flipped.(panels)))
-   end
-
 end
 
 # ╔═╡ a10f122d-fe66-4523-8322-6907481a096f
@@ -981,7 +992,7 @@ mutable struct Searcher
   function Searcher(want::Vector{<:AbstractWantedPanel};
                     available=AVAILABLE_PANELS)
     initial_state = SearchState(want)
-    new(available, want,
+    new(available, uniqueWantedPanels(want),
         PriorityQueue{SearchState, SearchPriority}(
           initial_state => priority(initial_state)),
         Set{SearchState}(),
@@ -1010,56 +1021,63 @@ end
 
 # ╔═╡ 4e51fc12-7f05-49e2-b55a-7d91c47dd185
 function progress(searcher::Searcher, state::SearchState)::Nothing
-  if searcher.cheapest != nothing &&
-    searcher.cheapest.accumulated_cost <= state.accumulated_cost
-    # No improvement possible.  Prune this search branch:
-    return nothing
-  end
-  push!(searcher.considered_states, state)
-  if isempty(state.wanted)
-    return nothing
-  end
-  if isempty(state.working)
-    for p in searcher.available_stock
-      if any((w) -> fitsin(w, p), state.wanted)
-	enqueue(searcher,
-		SearchState(state, p.cost, nothing, nothing, BoughtPanel(p)))
-      end
+    if searcher.cheapest != nothing &&
+        searcher.cheapest.accumulated_cost <= state.accumulated_cost
+        # No improvement possible.  Prune this search branch:
+        return nothing
     end
-    return nothing
-  end
-  # Try cutting the first wanted panel from each of the working panels
-  wanted = state.wanted[1]
-  for working in state.working
-    if !fitsin(wanted, working)
-      continue
+    push!(searcher.considered_states, state)
+    if isempty(state.wanted)
+        return nothing
     end
-    for axis_ in subtypes(Axis)
-      axis = axis_()
-      cuts = cut(working, axis, distance(wanted, axis))
-      if length(cuts) == 0
-	continue
-      end
-      @assert distance(cuts[1], axis) == distance(wanted, axis)
-      if distance(cuts[1], other(axis)) == distance(wanted, other(axis))
-	enqueue(searcher, SearchState(state, COST_PER_CUT,
-				      FinishedPanel(cuts[1], wanted),
-                                      working,
-						cuts[2:end]...))
-	continue
-      end
-      cuts2 = cut(cuts[1], other(axis), distance(wanted, other(axis)))
-      if length(cuts2) == 0
-	continue
-      end
-      @assert distance(cuts2[1], other(axis)) == distance(wanted, other(axis))
-      enqueue(searcher, SearchState(state, 2 * COST_PER_CUT,
-				    FinishedPanel(cuts2[1], wanted),
-                                    working,
-					cuts[2:end]..., cuts2[2:end]...))
+    if isempty(state.working)
+        for p in searcher.available_stock
+            if any((w) -> fitsin(w, p), state.wanted)
+	        enqueue(searcher,
+		        SearchState(state, p.cost, nothing, nothing, BoughtPanel(p)))
+            end
+        end
+        return nothing
     end
-  end
-  return nothing
+    # Try cutting the first wanted panel from each of the working panels
+    function cutWanted(wanted)
+        for working in state.working
+            if !fitsin(wanted, working)
+                continue
+            end
+            for axis_ in subtypes(Axis)
+                axis = axis_()
+                cuts = cut(working, axis, distance(wanted, axis))
+                if length(cuts) == 0
+	            continue
+                end
+                @assert distance(cuts[1], axis) == distance(wanted, axis)
+                if distance(cuts[1], other(axis)) == distance(wanted, other(axis))
+	            enqueue(searcher, SearchState(state, COST_PER_CUT,
+				                  FinishedPanel(cuts[1], wanted),
+                                                  working,
+						  cuts[2:end]...))
+	            continue
+                end
+                cuts2 = cut(cuts[1], other(axis), distance(wanted, other(axis)))
+                if length(cuts2) == 0
+	            continue
+                end
+                @assert distance(cuts2[1], other(axis)) == distance(wanted, other(axis))
+                enqueue(searcher, SearchState(state, 2 * COST_PER_CUT,
+				              FinishedPanel(cuts2[1], wanted),
+                                              working,
+					      cuts[2:end]..., cuts2[2:end]...))
+            end
+        end
+        return nothing
+    end
+    wanted = state.wanted[1]
+    # For FlippedPanel we consider both the flipped and original shapes:
+    if wanted isa FlippedPanel
+        cutWanted(wanted.was)
+    end
+    cutWanted(wanted)
 end
 
 # ╔═╡ 5aac7456-b32f-40e8-a015-fcbea6f638ff
@@ -1652,29 +1670,6 @@ md"""
 Generate an HTML fragment that provides a detailed report of our cut search and results.
 """
 
-# ╔═╡ c1d12f43-5f40-4919-8ea4-ef18f346de06
-begin
-	function uniqueWantedPanels(panels)
-		result = []
-		have = []
-		# Consider just FlippedPanels first:
-		for flipped in filter(p -> p isa FlippedPanel, panels)
-			push!(result, flipped)
-			push!(have, flipped)
-			push!(have, flipped.was)
-		end
-		# Now include any WantedPanels that are not also flipped:
-		for wanted in filter(p -> p isa WantedPanel, panels)
-			if wanted in have
-				continue
-			end
-			push!(result, wanted)
-			push!(have, wanted)
-		end
-		return result
-	end
-end
-
 # ╔═╡ 0d804f8e-838a-49a0-983e-d517d7588f56
 cat = `"c:/Program Files/Git/usr/bin/cat.exe"`
 
@@ -1739,7 +1734,7 @@ function report(searcher::Searcher;
                 end
             end
             elt(io, :tbody) do
-                for panel in uniqueWantedPanels(searcher.wanted)
+                for panel in searcher.wanted
                     elt(io, :tr) do
                         td(io, panel.label; align="center")
                         td(io, panel.length; align="right")
@@ -1860,7 +1855,7 @@ md"""
 
 # ╔═╡ 81b8240b-e3c0-427d-b57a-b07e52963f15
 let
-	searcher = Searcher(flipped(wanda_box_panels))
+	searcher = Searcher(flipped.(wanda_box_panels))
 	run(searcher)
 	report(searcher)
 end
@@ -1913,8 +1908,8 @@ zero(Quantity{Real, CURRENCY})
 # ╠═34bab1fd-ecdc-4054-8c69-5325ae807e1f
 # ╟─7c51768d-f376-487c-a88d-f795fb01da48
 # ╠═594a5dc5-77cc-4610-8ae0-2ee54abb1d4b
-# ╠═da3816af-531f-4eaa-90bd-b187f80b54a6
 # ╠═ecacafd3-5f70-41d9-b6cd-6b4893186b2a
+# ╠═7e29ad94-89c1-4903-8099-52b258a7a622
 # ╟─adb89a84-5223-42db-90d5-8703b2d9a3b7
 # ╠═5176ae29-b9ac-4c20-82c2-2e054a32eecc
 # ╠═4fcb103c-fca4-4bd5-8d55-018bdf73a686
@@ -1982,7 +1977,6 @@ zero(Quantity{Real, CURRENCY})
 # ╟─75012d46-535c-4d51-9948-f3c611c7a72c
 # ╠═9b16e856-dd32-400c-833a-cc2a3db5bf92
 # ╟─1ea2113a-27f1-427a-a78e-23ef4bf52b33
-# ╠═c1d12f43-5f40-4919-8ea4-ef18f346de06
 # ╠═f8b1780e-9614-4414-93e1-205233d3fb16
 # ╠═0d804f8e-838a-49a0-983e-d517d7588f56
 # ╠═2883b685-b394-408f-b1ec-eb4804ead5f8
