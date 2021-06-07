@@ -7,21 +7,26 @@ using InteractiveUtils
 # ╔═╡ b019d660-9f77-11eb-1527-278a3e1b087c
 begin
   using Pkg
-  Pkg.activate(mktempdir())
-  Pkg.add.([
-	# Unitful version constrained by UnitfulCurrency
-    Pkg.PackageSpec(name="Unitful", version="0.17.0"),
-    Pkg.PackageSpec(name="UnitfulUS", version="0.2.0"),
-	Pkg.PackageSpec(name="UnitfulCurrency"),
-    Pkg.PackageSpec(name="Match", version="1.1.0"),
-    Pkg.PackageSpec(name="DataStructures", version="0.18.9"),
-    Pkg.PackageSpec(name="DisplayAs", version="0.1.2"),
-    Pkg.PackageSpec(; name="NativeSVG",
-                    path="c:/Users/Mark Nahabedian/.julia/dev/NativeSVG.jl"),
-	"MacroTools",
-	"Plots",
-	# "BackendPackage"
-	])
+  # Pkg.activate(mktempdir())
+  Pkg.activate(mkpath("c:/Users/Mark Nahabedian/.julia/dev/PanelCutting"))
+
+  # Pkg.add.([
+  #       # Unitful version constrained by UnitfulCurrency
+  #   Pkg.PackageSpec(name="Unitful", version="0.17.0"),
+  #   Pkg.PackageSpec(name="UnitfulUS" #= , version="0.2.0" =#),
+  #       Pkg.PackageSpec(name="UnitfulCurrency"),
+  #       "Match",
+  #   # Pkg.PackageSpec(name="Match", version="1.1.0"),
+  #       "DataStructures",
+  #   # Pkg.PackageSpec(name="DataStructures", version="0.18.9"),
+  #       "DisplayAs",
+  #   # Pkg.PackageSpec(name="DisplayAs", version="0.1.2"),
+  #   Pkg.PackageSpec(; name="NativeSVG",
+  #                   path="c:/Users/Mark Nahabedian/.julia/dev/NativeSVG.jl"),
+  #       "MacroTools",
+  #       "Plots",
+  #       # "BackendPackage"
+  #       ])
 
   using Printf
   using Unitful
@@ -1749,9 +1754,16 @@ function report(searcher::Searcher;
                 end
             end
         end
-        elt(io, :p) do
-            write(io, "The best solution has a cost of " *
-                "$(searcher.cheapest.accumulated_cost).")
+        if searcher.cheapest == nothing
+            elt(io, :p; style="font-weight: bold") do
+                write(io, "No solution has been found!")
+            end
+            return
+        else
+            elt(io, :p) do
+                write(io, "The best solution has a cost of " *
+                    "$(searcher.cheapest.accumulated_cost).")
+            end
         end
         # Table of panel areas
         elt(io, :div) do
@@ -1771,10 +1783,10 @@ function report(searcher::Searcher;
                                 td(io, p.label; align="center")
                                 td(io, area(p); align="right")
                                 td(io, @sprintf("%.2f%%",
-						100 * area(p)/bought_area);
+						100 * convert(Float64, area(p)/bought_area));
 				   align="right")
                                 if p == panels[1]
-				    frac = sum(area.(panels)) / bought_area
+				    frac = convert(Float64, sum(area.(panels)) / bought_area)
 				    td(io, @sprintf("%.2f%%", 100 * frac);
 				       rowspan=length(panels),
 				       valign="top",
@@ -1858,6 +1870,38 @@ let
 	searcher = Searcher(flipped.(wanda_box_panels))
 	run(searcher)
 	report(searcher)
+end
+
+# ╔═╡ 1d99d3f7-f1a7-46f4-92d5-10a5b2677276
+md"""
+## An Example that Requires Flipped and Unflipped Panels for Optimality
+"""
+
+# ╔═╡ f1cf4d1c-2844-4bb5-b230-2e948af91852
+let
+	biggest = sort(AVAILABLE_PANELS, by=area, rev=true)[1]
+	wanted = [
+		WantedPanel(
+			length = 1.1 * biggest.width,
+			width = (biggest.length - 15u"inch") / 2,
+			label = "panel 1"),
+		WantedPanel(
+			length = 1.1 * biggest.width,
+			width = (biggest.length - 15u"inch") / 2,
+			label = "panel 2"),
+		WantedPanel(
+			length = 14u"inch",
+			width = 20u"inch",
+			label = "panel 3"),
+		WantedPanel(
+			length = 14u"inch",
+			width = 20u"inch",
+			label = "panel 4")
+		]
+	searcher = Searcher(flipped.(wanted), available=[biggest])
+	run(searcher)
+	# report(searcher)
+	searcher
 end
 
 # ╔═╡ 2d6b3e56-0858-4b7a-9bd7-5d5fa2b835c9
@@ -1988,6 +2032,8 @@ zero(Quantity{Real, CURRENCY})
 # ╠═aeaa6940-4f97-4286-97d4-7ad6dc6013b1
 # ╟─a968cf5a-bed4-4939-980f-86e90903b756
 # ╠═81b8240b-e3c0-427d-b57a-b07e52963f15
+# ╟─1d99d3f7-f1a7-46f4-92d5-10a5b2677276
+# ╠═f1cf4d1c-2844-4bb5-b230-2e948af91852
 # ╟─2d6b3e56-0858-4b7a-9bd7-5d5fa2b835c9
 # ╠═97d24eee-024e-4079-948a-49245fd3c734
 # ╠═52956b53-22a2-47c2-bb8d-d70ea63dcff6
