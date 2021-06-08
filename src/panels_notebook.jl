@@ -1035,15 +1035,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
     if isempty(state.wanted)
         return nothing
     end
-    if isempty(state.working)
-        for p in searcher.available_stock
-            if any((w) -> fitsin(w, p), state.wanted)
-	        enqueue(searcher,
-		        SearchState(state, p.cost, nothing, nothing, BoughtPanel(p)))
-            end
-        end
-        return nothing
-    end
+	successors = 0
     # Try cutting the first wanted panel from each of the working panels
     function cutWanted(wanted)
         for working in state.working
@@ -1062,6 +1054,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
 				                  FinishedPanel(cuts[1], wanted),
                                                   working,
 						  cuts[2:end]...))
+				successors += 1
 	            continue
                 end
                 cuts2 = cut(cuts[1], other(axis), distance(wanted, other(axis)))
@@ -1073,6 +1066,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
 				              FinishedPanel(cuts2[1], wanted),
                                               working,
 					      cuts[2:end]..., cuts2[2:end]...))
+				successors += 1
             end
         end
         return nothing
@@ -1082,6 +1076,14 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
     if wanted isa FlippedPanel
         cutWanted(wanted.was)
     end
+	if successors == 0 && !isempty(state.wanted)
+        for p in searcher.available_stock
+            if fitsin(state.wanted[1], p)
+	        enqueue(searcher,
+		        SearchState(state, p.cost, nothing, nothing, BoughtPanel(p)))
+            end
+        end
+	end
     cutWanted(wanted)
 end
 
@@ -1900,8 +1902,7 @@ let
 		]
 	searcher = Searcher(flipped.(wanted), available=[biggest])
 	run(searcher)
-	# report(searcher)
-	searcher
+	report(searcher)
 end
 
 # ╔═╡ 2d6b3e56-0858-4b7a-9bd7-5d5fa2b835c9
