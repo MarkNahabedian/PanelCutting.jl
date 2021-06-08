@@ -38,6 +38,9 @@ begin
   using DisplayAs
   using UUIDs
   using Plots
+
+  using PanelCutting
+
   import MacroTools
 end
 
@@ -53,39 +56,6 @@ md"""
 
 # ╔═╡ 1871abc7-d4cb-4ebd-862e-660a9ce5dc56
 begin
-
-  struct AllOf
-    length::Int
-    lengths
-    iterables
-    
-    function AllOf(iterables...)
-      lengths = length.(iterables)
-      new(sum(lengths), lengths, iterables)
-    end
-  end
-  
-  function Base.length(x::AllOf)::Int
-    x.length
-  end
-
-  Base.firstindex(x::AllOf) = 1
-
-  Base.lastindex(x::AllOf) = x.length
-
-  function Base.getindex(x::AllOf, index::Int)
-	if index < 1
-	  throw(BoundsError(x, index))
-	end
-	idx = index
-    for i in 1:length(x.lengths)
-      if idx <= x.lengths[i]
-        return x.iterables[i][idx]
-      end
-      idx -= x.lengths[i]
-    end
-	throw(BoundsError(x, index))
-  end
 
 md"""
     panelUID()
@@ -109,61 +79,6 @@ end
 begin
   Unitful.preferunits(u"inch")
 end
-
-# ╔═╡ 5be6a7bd-b97c-4b97-ab47-9d83b3a2dd77
-md"""
-  # Axes
-
-  We define two singleton types LengthAxis and WidthAxis with the common supertype Axis.
-
-  Note that the instances of these Axis types are LengthAxis() and WidthAxis().
-
-  Measurements are made along an axis.
-
-  Cuts are made across an axis.
-  """
-
-# ╔═╡ 6835fdd3-eead-4d2b-81ce-a05df4f57499
-begin
-  abstract type Axis end
-
-  struct LengthAxis <: Axis end
-  struct WidthAxis <: Axis end
-
-"""
-    other(axis)
-returns the axis that is perpendicular to the specified axis.
-"""
-  function other end
-	
-function other(axis::LengthAxis)::Axis
-  WidthAxis()
-end
-
-function other(axis::WidthAxis)::Axis
-  LengthAxis()
-end
-
-  function moveby(x, y, axis::LengthAxis, distance)
-    (x + distance, y)
-  end
-
-  function moveby(x, y, axis::WidthAxis, distance)
-    (x, y + distance)
-  end
-
-  const zerozero = (0u"inch", 0u"inch")
-
-@assert LengthAxis() isa Axis
-@assert WidthAxis() isa Axis
-@assert other(WidthAxis()) == LengthAxis()
-@assert other(LengthAxis()) == WidthAxis()
-
-@assert moveby(zerozero..., LengthAxis(), 10u"inch") == (10u"inch", 0u"inch")
-@assert moveby(zerozero..., WidthAxis(), 10u"inch") == (0u"inch", 10u"inch")
-
-end
-
 
 # ╔═╡ 1292709e-63f9-4f9f-a6c0-0e9068a4c6b6
 md"""
@@ -1945,8 +1860,6 @@ zero(Quantity{Real, CURRENCY})
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
 # ╠═1871abc7-d4cb-4ebd-862e-660a9ce5dc56
 # ╠═60fdb133-5d21-4445-90f9-3bbe49fb743b
-# ╟─5be6a7bd-b97c-4b97-ab47-9d83b3a2dd77
-# ╟─6835fdd3-eead-4d2b-81ce-a05df4f57499
 # ╟─1292709e-63f9-4f9f-a6c0-0e9068a4c6b6
 # ╠═98a48a7c-51e9-46f9-bdb4-e6a6b8380061
 # ╟─29c94131-5b13-4588-a772-d517198d2163
