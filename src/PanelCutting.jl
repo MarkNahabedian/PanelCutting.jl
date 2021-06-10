@@ -19,6 +19,8 @@ include("axes.jl")
 
 include("panels.jl")
 
+include("cutting.jl")
+
 #  include("./panels_notebook.jl")
 
 end
