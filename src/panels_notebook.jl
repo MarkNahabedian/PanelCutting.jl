@@ -125,18 +125,6 @@ md"""
 # ╔═╡ fc065401-50dc-4a21-98ad-b2ecd003d397
 SearchState(; wanted=Panels{AbstractWantedPanel}(sort(wanda_box_panels; by=major)))
 
-# ╔═╡ 77b32e0e-fb41-4a2a-8b1d-a272e4a1dd60
-
-
-# ╔═╡ d90e2c72-9fdb-4f9e-94c8-7b211d2b16e3
-md"""
-  ## Searching
-
-  This Searcher implements A* search using a PriorityQueue.
-
-  One could implement other searchers to implement, for example, depth or breadth first search.
-  """
-
 # ╔═╡ df84b1ad-cbd5-4f7b-a37e-30534b17adcf
 md"""
 # Reverse Graph
@@ -993,8 +981,6 @@ zero(Quantity{Real, CURRENCY})
 # ╠═65adef2d-9a53-4310-81a0-5dbb6d0918ca
 # ╠═1fec8fd3-fc4a-4efc-9d03-16b050c22926
 # ╠═fc065401-50dc-4a21-98ad-b2ecd003d397
-# ╠═77b32e0e-fb41-4a2a-8b1d-a272e4a1dd60
-# ╠═d90e2c72-9fdb-4f9e-94c8-7b211d2b16e3
 # ╟─df84b1ad-cbd5-4f7b-a37e-30534b17adcf
 # ╠═148e3f7f-4ac6-4e57-be5d-fb4082bf1154
 # ╟─85f95152-93a2-42cd-80f3-c3d7d931dbfe
