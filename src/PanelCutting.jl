@@ -8,6 +8,7 @@ using UnitfulUS
 using UnitfulCurrency
 using Match
 using DataStructures
+using InteractiveUtils
 using NativeSVG
 using DisplayAs
 using UUIDs
@@ -20,6 +21,10 @@ include("axes.jl")
 include("panels.jl")
 
 include("cutting.jl")
+
+include("supplier.jl")
+
+include("search.jl")
 
 #  include("./panels_notebook.jl")
 

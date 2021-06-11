@@ -104,16 +104,17 @@ md"""
 
 # ╔═╡ 65adef2d-9a53-4310-81a0-5dbb6d0918ca
 begin    # Supplier Data
-  KERF = (1/8)u"inch"
-  
-  COST_PER_CUT = 1.50u"USD"
-
-  const AVAILABLE_PANELS = [
+	
+  BOULTER_PLYWOOD = Supplier(
+		name = "Boulter Plywood",
+		kerf = (1/8)u"inch",
+		cost_per_cut = 1.50u"USD",
+		available_stock = [
     AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", 95u"USD"),
     AvailablePanel("5 x 5 x 1/2", 5u"ft", 5u"ft", 49u"USD"),
     AvailablePanel("30 x 60 x 1/2", 30u"inch", 60u"inch", 30u"USD"),
     AvailablePanel("30 x 30 x 1/2", 30u"inch", 30u"inch", 19u"USD")
-  ]
+  ])
 end
 
 # ╔═╡ 1fec8fd3-fc4a-4efc-9d03-16b050c22926
@@ -121,119 +122,11 @@ md"""
   # Searching for an optimal cut sequence
   """
 
-# ╔═╡ ed05bfa9-995a-422b-9ccb-215b5535723e
-begin
-  struct SearchState
-    # panels are removed from wanten once they are finished.
-    wanted::Panels{AbstractWantedPanel}
-    bought::Panels{BoughtPanel}
-    finished::Panels{FinishedPanel}
-    scrapped::Panels{ScrappedPanel}
-    working::Panels{CuttablePanel}
-    accumulated_cost::Quantity{N, CURRENCY} where N
-
-    function SearchState(;
-                         wanted=Panels{AbstractWantedPanel}([]),
-                         bought=Panels{BoughtPanel}([]),
-                         finished=Panels{FinishedPanel}([]),
-                         scrapped=Panels{ScrappedPanel}([]),
-                         working=Panels{CuttablePanel}([]),
-                         accumulated_cost=0u"USD")
-	  newstate = new(wanted, bought, finished, scrapped, working, accumulated_cost)
-	  panels = AllOf(finished, scrapped, working)
-	  for i in 1:length(panels)
-		for j in i+1:length(panels)
-		  errIfOverlap(panels[i], panels[j], newstate)
-		end
-	  end
-      return newstate
-    end
-  end
-  
-  # Constructor for the initial search state:
-  function SearchState(want::Vector{<:AbstractWantedPanel})
-    SearchState(; wanted=Panels{AbstractWantedPanel}(sort(want;
-					                  lt=smaller, rev=true)))
-  end
-  
-  # A constructor for successor states that enforces critical invariants
-  function SearchState(precursor::SearchState, cost,
-		       finished::Union{Nothing, FinishedPanel},
-                       used::Union{Nothing, CuttablePanel},
-		       offcuts::CuttablePanel...)
-	newly_bought = filter(x -> x isa BoughtPanel, offcuts)
-	bought = if length(newly_bought) == 0
-		precursor.bought
-	else
-		Panels{BoughtPanel}([precursor.bought..., newly_bought...])
-	end
-    wanted = if finished == nothing
-      precursor.wanted
-    else
-      filter(precursor.wanted) do w
-		!wantsmatch(w, finished.wanted)
-      end
-    end
-    newlyscrapped=[]
-    working=[]
-    for p in [offcuts...,
-              precursor.working...]
-      if p == used
-        continue
-      end
-      if any((w) -> fitsin(w, p), wanted)
-	push!(working, p)
-      else
-	push!(newlyscrapped, ScrappedPanel(was=p))
-      end
-    end
-    state = SearchState(;
-		        wanted=wanted,
-		        bought=bought,
-		        finished=if finished == nothing
-                          precursor.finished
-                        else
-                          Panels{FinishedPanel}(
-			    union((finished,),
-				  precursor.finished))
-                        end,
-		        scrapped=Panels{ScrappedPanel}(
-			  union(newlyscrapped, precursor.scrapped)),
-		        working=Panels{CuttablePanel}(working),
-		        accumulated_cost=precursor.accumulated_cost + cost)
-    # println("precursor: ", precursor, "\n      new: ", state)
-    return state
-  end
-  
-  function doneness(state::SearchState)::Real
-    a = (x) -> reduce(+, area.(x); init=0u"inch^2")
-    finished = a(state.finished)
-    return finished / (finished + a(state.wanted))
-  end
-end
-
-# ╔═╡ 042388f8-d557-4e9c-b9a8-71865563ffac
-
-
 # ╔═╡ fc065401-50dc-4a21-98ad-b2ecd003d397
 SearchState(; wanted=Panels{AbstractWantedPanel}(sort(wanda_box_panels; by=major)))
 
-# ╔═╡ c72bb206-c7c6-4be6-8b92-446540edbea2
-md"""
-  ## Priority
-
-  For A* Search we need to assign a priority to each state in the state space we are searching through.  A SearchState with **lower** priority will be considered **ahead** of one with hjigher priority.
-  """
-
 # ╔═╡ 77b32e0e-fb41-4a2a-8b1d-a272e4a1dd60
-SearchPriority = Real
 
-# ╔═╡ 81ffb853-ba0a-4513-b4e1-21f5c2327dc9
-function priority(state::SearchState)::SearchPriority
-  # Priority should get worse as the cost increases but should get better
-  # as we approach completion.
-  (1 - doneness(state)) * ustrip(Real, u"USD", state.accumulated_cost)
-end
 
 # ╔═╡ d90e2c72-9fdb-4f9e-94c8-7b211d2b16e3
 md"""
@@ -243,127 +136,6 @@ md"""
 
   One could implement other searchers to implement, for example, depth or breadth first search.
   """
-
-# ╔═╡ 7b64474a-bbb1-4bc2-8f87-a35e4b168545
-mutable struct Searcher
-  available_stock::Vector{AvailablePanel}
-  wanted::Vector{<:AbstractWantedPanel}
-  states::PriorityQueue{SearchState, SearchPriority}
-  finished_states::Set{SearchState}
-  cheapest::Union{SearchState, Nothing}
-  # For debugging:
-  considered_states::Vector{SearchState}
-  
-  function Searcher(want::Vector{<:AbstractWantedPanel};
-                    available=AVAILABLE_PANELS)
-    initial_state = SearchState(want)
-    new(available, uniqueWantedPanels(want),
-        PriorityQueue{SearchState, SearchPriority}(
-          initial_state => priority(initial_state)),
-        Set{SearchState}(),
-	nothing,
-	Vector{SearchState}())
-  end
-end
-
-# ╔═╡ 137932b7-b914-47f0-b355-2406c7dfe4a4
-function enqueue(searcher::Searcher, state::Union{SearchState, Nothing})::Nothing
-  if state == Nothing
-    return nothing
-  end
-  if isempty(state.wanted)
-    push!(searcher.finished_states, state)
-    if searcher.cheapest == nothing
-      searcher.cheapest = state
-    elseif state.accumulated_cost < searcher.cheapest.accumulated_cost
-      searcher.cheapest = state
-    end
-  else
-    enqueue!(searcher.states, state => priority(state))
-  end
-  nothing
-end
-
-# ╔═╡ 4e51fc12-7f05-49e2-b55a-7d91c47dd185
-function progress(searcher::Searcher, state::SearchState)::Nothing
-    if searcher.cheapest != nothing &&
-        searcher.cheapest.accumulated_cost <= state.accumulated_cost
-        # No improvement possible.  Prune this search branch:
-        return nothing
-    end
-    push!(searcher.considered_states, state)
-    if isempty(state.wanted)
-        return nothing
-    end
-	successors = 0
-    # Try cutting the first wanted panel from each of the working panels
-    function cutWanted(wanted)
-        for working in state.working
-            if !fitsin(wanted, working)
-                continue
-            end
-            for axis_ in subtypes(Axis)
-                axis = axis_()
-                cuts = cut(working, axis, distance(wanted, axis);
-						kerf=KERF,
-						cost=COST_PER_CUT)
-                if length(cuts) == 0
-	            continue
-                end
-                @assert distance(cuts[1], axis) == distance(wanted, axis)
-                if distance(cuts[1], other(axis)) == distance(wanted, other(axis))
-	            enqueue(searcher, SearchState(state, COST_PER_CUT,
-				                  FinishedPanel(cuts[1], wanted),
-                                                  working,
-						  cuts[2:end]...))
-				successors += 1
-	            continue
-                end
-                cuts2 = cut(cuts[1], other(axis), distance(wanted, other(axis));
-						kerf=KERF,
-						cost=COST_PER_CUT)
-                if length(cuts2) == 0
-	            continue
-                end
-                @assert distance(cuts2[1], other(axis)) == distance(wanted, other(axis))
-                enqueue(searcher, SearchState(state, 2 * COST_PER_CUT,
-				              FinishedPanel(cuts2[1], wanted),
-                                              working,
-					      cuts[2:end]..., cuts2[2:end]...))
-				successors += 1
-            end
-        end
-        return nothing
-    end
-    wanted = state.wanted[1]
-    # For FlippedPanel we consider both the flipped and original shapes:
-    if wanted isa FlippedPanel
-        cutWanted(wanted.was)
-    end
-	if successors == 0 && !isempty(state.wanted)
-        for p in searcher.available_stock
-            if fitsin(state.wanted[1], p)
-	        enqueue(searcher,
-		        SearchState(state, p.cost, nothing, nothing, BoughtPanel(p)))
-            end
-        end
-	end
-    cutWanted(wanted)
-end
-
-# ╔═╡ 5aac7456-b32f-40e8-a015-fcbea6f638ff
-function run(searcher::Searcher)
-  while !isempty(searcher.states)
-    s = dequeue!(searcher.states)
-    progress(searcher, s)
-  end
-end
-
-# ╔═╡ 673904ce-42d2-44d8-93c4-cdc59d1e9392
-function allstates(searcher::Searcher)
-	union(searcher.finished_states,
-	      keys(searcher.states))
-end
 
 # ╔═╡ df84b1ad-cbd5-4f7b-a37e-30534b17adcf
 md"""
@@ -1092,9 +864,10 @@ md"""
 
 # ╔═╡ e3f1b65c-1bb2-44ee-bbec-8bda4e1ae6c3
 let
-	p1, p2 = cut(BoughtPanel(AVAILABLE_PANELS[1]), LengthAxis(), 10u"inch";
-		kerf=KERF,
-		cost=COST_PER_CUT)
+	p1, p2 = cut(BoughtPanel(BOULTER_PLYWOOD.available_stock[1]),
+		LengthAxis(), 10u"inch";
+		kerf=BOULTER_PLYWOOD.kerf,
+		cost=BOULTER_PLYWOOD.cost_per_cut)
 	fp = FinishedPanel(p1, WantedPanel(length=10u"inch", width=p1.width, label="foo"))
 	sp = ScrappedPanel(was=p2)
 	rpg = ReversePanelGraph()
@@ -1110,8 +883,8 @@ md"""
 
 # ╔═╡ 4a9ebc9b-b91c-4ff6-ba55-2c32093044be
 let
-  searcher = Searcher(wanda_box_panels[1:2])
-  run(searcher)
+  searcher = Searcher(BOULTER_PLYWOOD, wanda_box_panels[1:2])
+  search(searcher)
   report(searcher)
 end
 
@@ -1122,8 +895,8 @@ md"""
 
 # ╔═╡ aeaa6940-4f97-4286-97d4-7ad6dc6013b1
 let
-	searcher = Searcher(wanda_box_panels)
-	run(searcher)
+	searcher = Searcher(BOULTER_PLYWOOD, wanda_box_panels)
+	search(searcher)
 	@assert length(searcher.cheapest.finished) == length(wanda_box_panels)
 	report(searcher)
 end
@@ -1135,8 +908,8 @@ md"""
 
 # ╔═╡ 81b8240b-e3c0-427d-b57a-b07e52963f15
 let
-	searcher = Searcher(flipped.(wanda_box_panels))
-	run(searcher)
+	searcher = Searcher(BOULTER_PLYWOOD, flipped.(wanda_box_panels))
+	search(searcher)
 	report(searcher)
 end
 
@@ -1147,7 +920,11 @@ md"""
 
 # ╔═╡ f1cf4d1c-2844-4bb5-b230-2e948af91852
 let
-	biggest = sort(AVAILABLE_PANELS, by=area, rev=true)[1]
+	biggest = sort(BOULTER_PLYWOOD.available_stock, by=area, rev=true)[1]
+	supplier = Supplier(name = "test",
+		cost_per_cut = BOULTER_PLYWOOD.cost_per_cut,
+		kerf = BOULTER_PLYWOOD.kerf,
+		available_stock = [biggest])
 	wanted = [
 		WantedPanel(
 			length = 1.1 * biggest.width,
@@ -1166,8 +943,8 @@ let
 			width = 20u"inch",
 			label = "panel 4")
 		]
-	searcher = Searcher(flipped.(wanted), available=[biggest])
-	run(searcher)
+	searcher = Searcher(BOULTER_PLYWOOD, flipped.(wanted))
+	search(searcher)
 	report(searcher)
 end
 
@@ -1214,19 +991,10 @@ zero(Quantity{Real, CURRENCY})
 # ╠═ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─f6a43438-d7b0-442d-bb05-9e4488855665
 # ╠═65adef2d-9a53-4310-81a0-5dbb6d0918ca
-# ╟─1fec8fd3-fc4a-4efc-9d03-16b050c22926
-# ╠═ed05bfa9-995a-422b-9ccb-215b5535723e
-# ╠═042388f8-d557-4e9c-b9a8-71865563ffac
+# ╠═1fec8fd3-fc4a-4efc-9d03-16b050c22926
 # ╠═fc065401-50dc-4a21-98ad-b2ecd003d397
-# ╟─c72bb206-c7c6-4be6-8b92-446540edbea2
-# ╟─77b32e0e-fb41-4a2a-8b1d-a272e4a1dd60
-# ╠═81ffb853-ba0a-4513-b4e1-21f5c2327dc9
-# ╟─d90e2c72-9fdb-4f9e-94c8-7b211d2b16e3
-# ╠═7b64474a-bbb1-4bc2-8f87-a35e4b168545
-# ╠═137932b7-b914-47f0-b355-2406c7dfe4a4
-# ╠═5aac7456-b32f-40e8-a015-fcbea6f638ff
-# ╠═4e51fc12-7f05-49e2-b55a-7d91c47dd185
-# ╠═673904ce-42d2-44d8-93c4-cdc59d1e9392
+# ╠═77b32e0e-fb41-4a2a-8b1d-a272e4a1dd60
+# ╠═d90e2c72-9fdb-4f9e-94c8-7b211d2b16e3
 # ╟─df84b1ad-cbd5-4f7b-a37e-30534b17adcf
 # ╠═148e3f7f-4ac6-4e57-be5d-fb4082bf1154
 # ╟─85f95152-93a2-42cd-80f3-c3d7d931dbfe
