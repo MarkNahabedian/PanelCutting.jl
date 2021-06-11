@@ -15,16 +15,12 @@ using UUIDs
 using Plots
 
 include("AllOf.jl")
-
 include("axes.jl")
-
 include("panels.jl")
-
 include("cutting.jl")
-
 include("supplier.jl")
-
 include("search.jl")
+include("graph.jl")
 
 #  include("./panels_notebook.jl")
 

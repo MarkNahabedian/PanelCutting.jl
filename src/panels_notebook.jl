@@ -94,93 +94,6 @@ begin    # Supplier Data
   ])
 end
 
-# ╔═╡ df84b1ad-cbd5-4f7b-a37e-30534b17adcf
-md"""
-# Reverse Graph
-
-AbstractPanels are related to one another through a directed graph
-based on various relations.  Here we construct the inverse directed graph,
-which could be one-to-many, as a Dict.
-"""
-
-# ╔═╡ 148e3f7f-4ac6-4e57-be5d-fb4082bf1154
-begin
-	struct ReversePanelGraph
-		arcs::Set{Pair}
-	
-		ReversePanelGraph() = new(Set{Pair{AbstractPanel, AbstractPanel}}())
-	end
-	
-	function Base.haskey(rpg::ReversePanelGraph, key)::Bool
-		for p in rpg.arcs
-			if p.first == key
-				return true
-			end
-		end
-		return false
-	end
-
-	Base.keys(rpg::ReversePanelGraph) =
-		Set([p.first for p in rpg.arcs])
-
-	Base.values(rpg::ReversePanelGraph) =
-		Set([p.second for p in rpg.arcs])
-	
-	nodes(rpg::ReversePanelGraph) = union(keys(rpg), values(rpg))
-	
-	arcs(rpg::ReversePanelGraph) = rpg.arcs
-
-	Base.getindex(rpg::ReversePanelGraph, key) =
-		(p -> p.second).(filter(p -> p.first == key, rpg.arcs))
-
-	havingKey(rpg::ReversePanelGraph, key) =
-		filter(p -> p.first == key, rpg.arcs)
-	
-	havingValue(rpg::ReversePanelGraph, value) =
-		filter(p -> p.second == value, rpg.arcs)
-
-	function injest(rpg::ReversePanelGraph, panel::AbstractPanel)
-	end
-
-	function injest(rpg::ReversePanelGraph, panel::BoughtPanel)
-	  push!(rpg.arcs, (panel.was) => panel)
-	  injest(rpg, panel.was)
-	end
-
-	function injest(rpg::ReversePanelGraph, panel::TerminalPanel)
-		push!(rpg.arcs, (panel.was) => panel)
-		injest(rpg, panel.was)
-	end
-
-	function injest(rpg::ReversePanelGraph, panel::Panel)
-		push!(rpg.arcs, (panel.cut_from) => panel)
-		injest(rpg, panel.cut_from)
-	end
-
-	function makeReversePanelGraph(state::SearchState)::ReversePanelGraph
-		rpg = ReversePanelGraph()
-		for f in state.finished
-			injest(rpg, f)
-		end
-		for s in state.scrapped
-			injest(rpg, s)
-		end
-		return rpg
-	end
-
-	function transform!(rpg::ReversePanelGraph, addarcs, removearcs)
-		setdiff!(rpg.arcs, removearcs)
-		union!(rpg.arcs, addarcs)
-		return nothing
-	end
-
-	function applyRule!(rpg::ReversePanelGraph, rule)
-	  nodes(rpg) .|>
-		(node -> rule(rpg, node)) .|>
-		(ar -> transform!(rpg, ar...))
-	end
-end
-
 # ╔═╡ 85f95152-93a2-42cd-80f3-c3d7d931dbfe
 md"""
 # Describing the Cuts using SVG
@@ -287,7 +200,7 @@ end
 
 # ╔═╡ bcbcf050-ee5f-4531-b432-7e2006fccc1e
 function toSVG(io::IO, state::SearchState)::Nothing
-	rpg = makeReversePanelGraph(state)
+	rpg = makePanelGraph(state)
 	write(io, """<?xml version="1.0" encoding="UTF-8"?>\n""")
 	write(io, """<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n""")
 	write(io, """          "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n""")
@@ -322,11 +235,11 @@ function toSVG(io::IO, state::SearchState)::Nothing
 end
 
 # ╔═╡ ffe9f05a-4348-4967-ba9d-5b0cc57dd70b
-function toSVG(io::IO, panel::AbstractPanel, rpg::ReversePanelGraph)::Nothing
+function toSVG(io::IO, panel::AbstractPanel, rpg::PanelGraph)::Nothing
 end
 
 # ╔═╡ 738201a6-b769-4586-81cd-c8e73c9a6ad9
-function toSVG(io::IO, panel::BoughtPanel, rpg::ReversePanelGraph)::Nothing
+function toSVG(io::IO, panel::BoughtPanel, rpg::PanelGraph)::Nothing
 	# We want to have the longer dimension of panel run horizontally.
 	# This is already anticipated above wnere we calculate the SVG viewBox.
 	transform = ""
@@ -345,7 +258,7 @@ function toSVG(io::IO, panel::BoughtPanel, rpg::ReversePanelGraph)::Nothing
 end
 
 # ╔═╡ deb5d973-3fb6-48c9-87da-ed50eb4cd33d
-function toSVG(io::IO, panel::Panel, rpg::ReversePanelGraph)::Nothing
+function toSVG(io::IO, panel::Panel, rpg::PanelGraph)::Nothing
 	g(io; class="Panel") do
 		for p in rpg[panel]
 			toSVG(io, p, rpg)
@@ -366,7 +279,7 @@ function toSVG(io::IO, panel::Panel, rpg::ReversePanelGraph)::Nothing
 end
 
 # ╔═╡ c90350c2-9c91-43df-b7ed-2ed77f960e6d
-function toSVG(io::IO, panel::FinishedPanel, rpg::ReversePanelGraph)::Nothing
+function toSVG(io::IO, panel::FinishedPanel, rpg::PanelGraph)::Nothing
 	g(io; class="FinishedPanel") do
 		panelrect(io, panel, "finished")
 	end
@@ -389,7 +302,7 @@ begin
 	# This graph just shows panels by their types and uids and
 	# the relationships between them,
 	function dotgraph(io::IO, state::SearchState)::Nothing
-		rpg = makeReversePanelGraph(state)
+		rpg = makePanelGraph(state)
 		dotgraph(io, rpg)
 		return
 	end
@@ -445,10 +358,10 @@ end
 begin
   struct PanelCutGraph
     state::SearchState
-    rpg::ReversePanelGraph
+    rpg::PanelGraph
 
     function PanelCutGraph(state::SearchState)
-      pcg = new(state, makeReversePanelGraph(state))
+      pcg = new(state, makePanelGraph(state))
 	  applyRule!(pcg.rpg, addCutNodes)
 	  applyRule!(pcg.rpg, elideTerminalPanels)
 	  applyRule!(pcg.rpg, elideBoughtPanels)
@@ -456,9 +369,9 @@ begin
     end
   end
 
-  arcs(pcg::PanelCutGraph) = arcs(pcg.rpg)
+  PanelCutting.arcs(pcg::PanelCutGraph) = arcs(pcg.rpg)
 
-  nodes(pcg::PanelCutGraph) = nodes(pcg.rpg)
+  PanelCutting.nodes(pcg::PanelCutGraph) = PanelCutting.nodes(pcg.rpg)
 
   struct CutNode
     panel1::Panel
@@ -487,7 +400,7 @@ begin
   Compute the arguments to transform! in order to insert a
   CutNode wherever a panel is cut.
   """
-  function addCutNodes(rpg::ReversePanelGraph, key)
+  function addCutNodes(rpg::PanelGraph, key)
 	transformingGraph() do check, add, remove
 	  check(isa(key, CuttablePanel))
 	  arcs = havingKey(rpg, key)
@@ -511,7 +424,7 @@ begin
   succeeded by a TerminalPanel.
   
   """
-  function elideTerminalPanels(rpg::ReversePanelGraph, terminal)
+  function elideTerminalPanels(rpg::PanelGraph, terminal)
     transformingGraph() do check, add, remove
       check(terminal isa TerminalPanel)
       arcs2 = havingValue(rpg, terminal)
@@ -532,7 +445,7 @@ begin
   md"""
   Compute the arguments to transform! to elide BoughtPanels.
 	"""
-  function elideBoughtPanels(rpg::ReversePanelGraph, bought)
+  function elideBoughtPanels(rpg::PanelGraph, bought)
 	transformingGraph() do check, add, remove
 	  check(bought isa BoughtPanel)
 	  arcs1 = havingValue(rpg, bought)
@@ -827,10 +740,10 @@ let
 		cost=BOULTER_PLYWOOD.cost_per_cut)
 	fp = FinishedPanel(p1, WantedPanel(length=10u"inch", width=p1.width, label="foo"))
 	sp = ScrappedPanel(was=p2)
-	rpg = ReversePanelGraph()
+	rpg = PanelGraph()
 	injest(rpg, fp)
 	injest(rpg, sp)
-	nodes(rpg) .|> (key -> (elideTerminalPanels(rpg, key)))
+	PanelCutting.nodes(rpg) .|> (key -> (elideTerminalPanels(rpg, key)))
 end
 
 # ╔═╡ c5f24393-4c92-4dcf-8a14-8f81c03cc2f0
@@ -939,6 +852,9 @@ typeof(20u"USD")
 # ╔═╡ 4049d967-f932-4eec-b6fc-711a5df79531
 zero(Quantity{Real, CURRENCY})
 
+# ╔═╡ ebd8ac5f-6c62-499b-8a1a-1bdba6933ca9
+methods(nodes)
+
 # ╔═╡ Cell order:
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
 # ╠═5f5c5ef3-efed-4afd-b304-5b37a9a81bd2
@@ -947,8 +863,6 @@ zero(Quantity{Real, CURRENCY})
 # ╠═ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─f6a43438-d7b0-442d-bb05-9e4488855665
 # ╠═65adef2d-9a53-4310-81a0-5dbb6d0918ca
-# ╟─df84b1ad-cbd5-4f7b-a37e-30534b17adcf
-# ╠═148e3f7f-4ac6-4e57-be5d-fb4082bf1154
 # ╟─85f95152-93a2-42cd-80f3-c3d7d931dbfe
 # ╠═2e1e9fc8-6209-4968-bf7e-fa97b72ebef3
 # ╟─134ac318-adb5-4939-96f7-3b70b12ffe43
@@ -993,3 +907,4 @@ zero(Quantity{Real, CURRENCY})
 # ╠═2b814578-5137-4805-bedf-2c7759d87048
 # ╠═7e368048-6a64-4439-8114-493f7f45ddfd
 # ╠═4049d967-f932-4eec-b6fc-711a5df79531
+# ╠═ebd8ac5f-6c62-499b-8a1a-1bdba6933ca9
