@@ -55,29 +55,6 @@ md"""
   Prefer inches.
   """
 
-# ╔═╡ 1871abc7-d4cb-4ebd-862e-660a9ce5dc56
-#=
-begin
-
-md"""
-    panelUID()
-Generate a unique identifier for each panel when it is created.
-We do this because Julia does not have a notion of equality that
-distibguishes between two separately created immutable structs
-with the same contents
-"""
-let
-  local nextID = 1
-  global function panelUID()::Int
-	i = nextID
-	nextID += 1
-	return i
-  end
-end
-
-end
-=#
-
 # ╔═╡ 60fdb133-5d21-4445-90f9-3bbe49fb743b
 begin
   Unitful.preferunits(u"inch")
@@ -116,14 +93,6 @@ begin    # Supplier Data
     AvailablePanel("30 x 30 x 1/2", 30u"inch", 30u"inch", 19u"USD")
   ])
 end
-
-# ╔═╡ 1fec8fd3-fc4a-4efc-9d03-16b050c22926
-md"""
-  # Searching for an optimal cut sequence
-  """
-
-# ╔═╡ fc065401-50dc-4a21-98ad-b2ecd003d397
-SearchState(; wanted=Panels{AbstractWantedPanel}(sort(wanda_box_panels; by=major)))
 
 # ╔═╡ df84b1ad-cbd5-4f7b-a37e-30534b17adcf
 md"""
@@ -974,13 +943,10 @@ zero(Quantity{Real, CURRENCY})
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
 # ╠═5f5c5ef3-efed-4afd-b304-5b37a9a81bd2
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
-# ╠═1871abc7-d4cb-4ebd-862e-660a9ce5dc56
 # ╠═60fdb133-5d21-4445-90f9-3bbe49fb743b
 # ╠═ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─f6a43438-d7b0-442d-bb05-9e4488855665
 # ╠═65adef2d-9a53-4310-81a0-5dbb6d0918ca
-# ╠═1fec8fd3-fc4a-4efc-9d03-16b050c22926
-# ╠═fc065401-50dc-4a21-98ad-b2ecd003d397
 # ╟─df84b1ad-cbd5-4f7b-a37e-30534b17adcf
 # ╠═148e3f7f-4ac6-4e57-be5d-fb4082bf1154
 # ╟─85f95152-93a2-42cd-80f3-c3d7d931dbfe
