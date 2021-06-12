@@ -23,6 +23,13 @@ include("search.jl")
 include("graph.jl")
 include("generic_dot.jl")
 
+function dotID(panel::AbstractPanel)
+    t = split(string(typeof(panel)), ".")[end]
+    "$(t)_$(string(panel.uid))"
+end
+
+include("svg.jl")
+
 #  include("./panels_notebook.jl")
 
 end
