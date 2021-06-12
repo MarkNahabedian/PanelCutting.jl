@@ -21,6 +21,7 @@ include("cutting.jl")
 include("supplier.jl")
 include("search.jl")
 include("graph.jl")
+include("generic_dot.jl")
 
 #  include("./panels_notebook.jl")
 

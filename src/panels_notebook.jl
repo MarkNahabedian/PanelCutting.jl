@@ -290,6 +290,12 @@ md"""
 # Generic Dot Code
 """
 
+# ╔═╡ f89c8f2e-8bdf-4d4e-8090-3f6a56e0ce85
+  function PanelCutting.dotID(panel::AbstractPanel)
+	t = split(string(typeof(panel)), ".")[end]
+ 	"$(t)_$(string(panel.uid))"
+  end
+
 # ╔═╡ dcbc9193-fa7a-435b-8f68-05b77e1d9b36
 md"""
 # Panel Progression Graph
@@ -301,7 +307,7 @@ A GraphViz graph that describes what panels are cut from what other panels.
 begin
 	# This graph just shows panels by their types and uids and
 	# the relationships between them,
-	function dotgraph(io::IO, state::SearchState)::Nothing
+	function PanelCutting.dotgraph(io::IO, state::SearchState)::Nothing
 		rpg = makePanelGraph(state)
 		dotgraph(io, rpg)
 		return
@@ -378,7 +384,7 @@ begin
     panel2::Panel
   end
 
-  function dotID(n::CutNode)
+  function PanelCutting.dotID(n::CutNode)
     return "CutNode_$(n.panel1.cut_from.uid)"
   end
 
@@ -508,56 +514,6 @@ begin
 
   function dotnode(io::IO, graph::PanelCutGraph, panel::AbstractPanel)
     write(io, """  "$(dotID(panel))"[shape=record; label="$(dotnodelabel(graph, panel))"]\n""")
-  end
-
-end
-
-# ╔═╡ f89c8f2e-8bdf-4d4e-8090-3f6a56e0ce85
-begin
-	
-  md"""
-	Write a GraphViz dot file describing the panel cutting progression
-	described in a SearchState.
-	"""
-  function dotgraph end
-
-  function rundot(path)
-	Base.run(`dot -Tsvg -O $path`)
-  end
-
-  function dotgraph(path::String, graph)
-    open(path, "w") do io
-      dotgraph(io, graph)
-    end
-    return path
-  end
-  
-  function dotgraph(io::IO, graph)
-    write(io, "digraph panels {\n")
-    for node in nodes(graph)
-      dotnode(io, graph, node)
-    end
-    for arc in arcs(graph)
-      diarc(io, graph, arc.first, arc.second)
-    end
-	write(io, "}\n")
-  end
-
-  function dotnode(io::IO, graph, node)
-	write(io, """  "$(dotID(node))"\n""")
-  end
-
-  function diarc(io::IO, graph, arc::Pair)
-    diarc(io, graph, arc.from, arc.to)
-  end
-
-  function diarc(io::IO, graph, from, to)
-    write(io, """  "$(dotID(from))" -> "$(dotID(to))"\n""")
-  end
-	
-  function dotID(panel::AbstractPanel)
-	t = split(string(typeof(panel)), ".")[end]
- 	"$(t)_$(string(panel.uid))"
   end
 
 end
@@ -852,9 +808,6 @@ typeof(20u"USD")
 # ╔═╡ 4049d967-f932-4eec-b6fc-711a5df79531
 zero(Quantity{Real, CURRENCY})
 
-# ╔═╡ ebd8ac5f-6c62-499b-8a1a-1bdba6933ca9
-methods(nodes)
-
 # ╔═╡ Cell order:
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
 # ╠═5f5c5ef3-efed-4afd-b304-5b37a9a81bd2
@@ -876,7 +829,7 @@ methods(nodes)
 # ╠═738201a6-b769-4586-81cd-c8e73c9a6ad9
 # ╠═deb5d973-3fb6-48c9-87da-ed50eb4cd33d
 # ╠═c90350c2-9c91-43df-b7ed-2ed77f960e6d
-# ╟─4cd74059-f59b-46e4-be23-bfbd95e4d96d
+# ╠═4cd74059-f59b-46e4-be23-bfbd95e4d96d
 # ╠═f89c8f2e-8bdf-4d4e-8090-3f6a56e0ce85
 # ╟─dcbc9193-fa7a-435b-8f68-05b77e1d9b36
 # ╠═bd178f5d-7701-4a09-ba6d-0b80712bc3e2
@@ -907,4 +860,3 @@ methods(nodes)
 # ╠═2b814578-5137-4805-bedf-2c7759d87048
 # ╠═7e368048-6a64-4439-8114-493f7f45ddfd
 # ╠═4049d967-f932-4eec-b6fc-711a5df79531
-# ╠═ebd8ac5f-6c62-499b-8a1a-1bdba6933ca9
