@@ -24,6 +24,7 @@ DisplayAs = "0.1"
 Match = "1"
 Plots = "1"
 Revise = "3"
+UnitfulCurrency = "0.2"
 julia = "1"
 
 [extras]
