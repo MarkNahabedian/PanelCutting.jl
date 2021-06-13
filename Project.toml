@@ -19,6 +19,7 @@ UnitfulCurrency = "f5cc5b76-f814-11e9-291c-a1ea2b8c31c6"
 UnitfulUS = "7dc9378f-8956-57ef-a780-aa31cc70ff3d"
 
 [compat]
+Revise = "3"
 DataStructures = "0.18"
 julia = "1"
 
