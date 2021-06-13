@@ -35,5 +35,14 @@ function Base.getindex(x::AllOf, index::Int)
     throw(BoundsError(x, index))
 end
 
+Base.iterate(iter::AllOf) = iterate(iter, firstindex(iter))
+
+function Base.iterate(iter::AllOf, state::Int)
+    if state > lastindex(iter)
+        return
+    end
+    return iter[state], state + 1
+end
+
 export AllOf
 
