@@ -23,7 +23,6 @@ begin
   #   # Pkg.PackageSpec(name="DisplayAs", version="0.1.2"),
   #   Pkg.PackageSpec(; name="NativeSVG",
   #                   path="c:/Users/Mark Nahabedian/.julia/dev/NativeSVG.jl"),
-  #       "MacroTools",
   #       "Plots",
   #       # "BackendPackage"
   #       ])
@@ -42,7 +41,6 @@ begin
 
   using PanelCutting
 
-  import MacroTools
 end
 
 # ╔═╡ 5f5c5ef3-efed-4afd-b304-5b37a9a81bd2
