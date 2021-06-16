@@ -1,7 +1,5 @@
-using Pkg
-Pkg.activate(".")
 
-using Revise
+using InteractiveUtils
 using PanelCutting
 using Unitful
 using UnitfulUS
