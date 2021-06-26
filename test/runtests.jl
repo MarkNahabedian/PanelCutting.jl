@@ -86,3 +86,16 @@ end
     # Write your tests here.
 end
 
+@testset "Graph" begin
+    g = PanelGraph()
+    injest(g, :a => :b)
+    injest(g, :b => :c)
+    injest(g, :a => 1)
+    injest(g, 1 => 1.1)
+    injest(g, 1 => 1.2)
+    @test query(g, :a, Symbol) == Set([:a => :b])
+    @test query(g, Symbol, :c) == Set([:b => :c])
+    @test length(query(g, Any, Number)) == 3
+    @test length(query(g, :b, :c)) == 1
+end
+
