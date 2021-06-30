@@ -188,8 +188,8 @@ begin
     function PanelCutGraph(state::SearchState)
       pcg = new(state, makePanelGraph(state))
 	  applyRule!(pcg.rpg, addCutNodes)
-	  applyRule!(pcg.rpg, elideTerminalPanels)
 	  applyRule!(pcg.rpg, elideBoughtPanels)
+	  applyRule!(pcg.rpg, elideTerminalPanels)
       pcg
     end
   end
@@ -207,7 +207,7 @@ begin
     return "CutNode_$(n.panel1.cut_from.uid)"
   end
 
-  function dotnode(io::IO, pcg::PanelCutGraph, n::CutNode)
+  function PanelCutting.dotnode(io::IO, pcg::PanelCutGraph, n::CutNode)
     write(io, """  "$(dotID(n))"[shape=pentagon; label="$(dotnodelabel(pcg, n))"]\n""")
     return n
   end
@@ -227,19 +227,17 @@ begin
   """
   function addCutNodes(rpg::PanelGraph, key)
 	transformingGraph() do check, add, remove
-	  check(isa(key, CuttablePanel))
-	  arcs = havingKey(rpg, key)
+	  check(key isa CuttablePanel)
+	  arcs = query(rpg, key, Panel)
 	  check(length(arcs) == 2)
 	  arc1, arc2 = Tuple(arcs)
-	  check(arc1.second isa Panel)
-	  check(arc2.second isa Panel)
 	  check(key == arc1.second.cut_from)
 	  check(key == arc2.second.cut_from)
-      cutnode = CutNode(arc1.second, arc2.second)
-      add(key => cutnode)
-      remove(arc1)
-      remove(arc2)
-      add(cutnode => cutnode.panel1)
+	  cutnode = CutNode(arc1.second, arc2.second)
+	  add(key => cutnode)
+	  remove(arc1)
+	  remove(arc2)
+	  add(cutnode => cutnode.panel1)
       add(cutnode => cutnode.panel2)
 	end
   end
@@ -252,14 +250,13 @@ begin
   function elideTerminalPanels(rpg::PanelGraph, terminal)
     transformingGraph() do check, add, remove
       check(terminal isa TerminalPanel)
-      arcs2 = havingValue(rpg, terminal)
+      arcs2 = query(rpg, Panel, terminal)
       check(length(arcs2) == 1)
-	  arc2 = first(arcs2)
+      arc2 = first(arcs2)
       panel = arc2.first
-      check(panel isa Panel)
-      arcs1 = havingValue(rpg, panel)
+      arcs1 = query(rpg, CutNode, panel)
       check(length(arcs1) == 1)
-	  arc1 = first(arcs1)
+      arc1 = first(arcs1)
       precursor = arc1.first
       add(precursor => terminal)
       remove(arc1)
@@ -273,11 +270,10 @@ begin
   function elideBoughtPanels(rpg::PanelGraph, bought)
 	transformingGraph() do check, add, remove
 	  check(bought isa BoughtPanel)
-	  arcs1 = havingValue(rpg, bought)
+	  arcs1 = query(rpg, AvailablePanel, bought)
 	  check(length(arcs1) == 1)
 	  arc1 = first(arcs1)
-	  check(arc1.first isa AvailablePanel)
-	  arcs2 = havingKey(rpg, bought)
+	  arcs2 = query(rpg, bought, Any)
 	  check(length(arcs2) == 1)
 	  arc2 = first(arcs2)
 	  remove(arc1)
@@ -331,7 +327,7 @@ begin
               "}")
   end
 
-  function dotnode(io::IO, graph::PanelCutGraph, panel::AbstractPanel)
+  function PanelCutting.dotnode(io::IO, graph::PanelCutGraph, panel::AbstractPanel)
     write(io, """  "$(dotID(panel))"[shape=record; label="$(dotnodelabel(graph, panel))"]\n""")
   end
 

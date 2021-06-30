@@ -39,23 +39,17 @@ arcs(rpg::PanelGraph) = rpg.arcs
 Base.getindex(rpg::PanelGraph, key) =
     (p -> p.second).(filter(p -> p.first == key, rpg.arcs))
 
-havingKey(rpg::PanelGraph, key) =
-    filter(p -> p.first == key, rpg.arcs)
-
-havingValue(rpg::PanelGraph, value) =
-    filter(p -> p.second == value, rpg.arcs)
-
-query(rpg::PanelGraph, from, to) =
-    filter(p -> p.first == from && p.second == to, rpg.arcs)
-
-query(rpg::PanelGraph, fromtype::Type, to) =
-    filter(p -> isa(p.first, fromtype) && p.second == to, rpg.arcs)
-
-query(rpg::PanelGraph, from, toType::Type) =
-    filter(p -> p.first == from && isa(p.second, toType), rpg.arcs)
-
-query(rpg::PanelGraph, fromType::Type, toType::Type) =
-    filter(p -> isa(p.first, fromType) && isa(p.second, toType), rpg.arcs)
+function query(pg::PanelGraph, from, to)
+    function querytest(elt, val)
+        if val isa Type
+            elt isa val
+        else
+            elt == val
+        end
+    end
+    filter(p -> querytest(p.first, from) && querytest(p.second, to),
+           pg.arcs)
+end
 
 function injest(rpg::PanelGraph, panel::AbstractPanel)
 end
@@ -98,7 +92,6 @@ function applyRule!(rpg::PanelGraph, rule)
 	(ar -> transform!(rpg, ar...))
 end
 
-export PanelGraph, nodes, arcs, havingKey, havingValue, query,
-    injest, makePanelGraph
+export PanelGraph, nodes, arcs, query, injest, makePanelGraph
 export transform, applyRule!
 
