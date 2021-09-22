@@ -234,12 +234,12 @@ A sheet of plywood we can buy frm the lumber yard.
     label::String
     width::LengthType
     length::LengthType
-    cost::Quantity{N, CURRENCY} where N
+    cost::MoneyType
 end
 
 function AvailablePanel(label::String,
 			width::LengthType, length::LengthType,
-			cost::Quantity{N, CURRENCY} where N)
+			cost::MoneyType)
     AvailablePanel(label=label, width=width, length=length, cost=cost)
 end
 		
@@ -294,7 +294,7 @@ end
 # AvailablePanel, we need to be able to distinguish between them
 # because making a cut in one of them does not alter tje other.
 let
-    ap = AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", 95u"USD")
+    ap = AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", money(95.00))
     @assert BoughtPanel(ap) != BoughtPanel(ap)
 end
 
@@ -320,7 +320,7 @@ struct Panel <: CuttablePanel
     cut_axis::Axis
     x::LengthType
     y::LengthType
-    cost::Quantity{N, CURRENCY} where N
+    cost::MoneyType
     
     function Panel(; length::LengthType, width::LengthType,
 		   cut_from::CuttablePanel, cut_at::LengthType, cut_axis::Axis,

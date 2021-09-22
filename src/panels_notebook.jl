@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.7
+# v0.16.0
 
 using Markdown
 using InteractiveUtils
@@ -9,6 +9,7 @@ begin
   using Pkg
   # Pkg.activate(mktempdir())
   Pkg.activate(mkpath("c:/Users/Mark Nahabedian/.julia/dev/PanelCutting"))
+  # Pkg.add(; url="https://github.com/MarkNahabedian/VectorLogging.jl.git")
 
   # Pkg.add.([
   #       # Unitful version constrained by UnitfulCurrency
@@ -32,19 +33,21 @@ begin
   using UnitfulUS
   using Match
   using DataStructures
-  using UnitfulCurrency
+  # using UnitfulCurrency
   using NativeSVG
   using DisplayAs
   using UUIDs
   using Plots
   using Printf
+  using Logging
+  using VectorLogging
 
   using PanelCutting
 
 end
 
-# ╔═╡ 5f5c5ef3-efed-4afd-b304-5b37a9a81bd2
-LOAD_PATH
+# ╔═╡ fd3cc42b-9718-4879-870b-c984913bf46c
+PanelCutting.WantedPanel
 
 # ╔═╡ 60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
 md"""
@@ -52,6 +55,9 @@ md"""
 
   Prefer inches.
   """
+
+# ╔═╡ e25b3bb7-93b3-4859-be30-ef912041479f
+Logging.global_logger(VectorLogger())
 
 # ╔═╡ 60fdb133-5d21-4445-90f9-3bbe49fb743b
 begin
@@ -83,12 +89,12 @@ begin    # Supplier Data
   BOULTER_PLYWOOD = Supplier(
 		name = "Boulter Plywood",
 		kerf = (1/8)u"inch",
-		cost_per_cut = 1.50u"USD",
+		cost_per_cut = money(1.50),
 		available_stock = [
-    AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", 95u"USD"),
-    AvailablePanel("5 x 5 x 1/2", 5u"ft", 5u"ft", 49u"USD"),
-    AvailablePanel("30 x 60 x 1/2", 30u"inch", 60u"inch", 30u"USD"),
-    AvailablePanel("30 x 30 x 1/2", 30u"inch", 30u"inch", 19u"USD")
+    AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", money(95.00)),
+    AvailablePanel("5 x 5 x 1/2", 5u"ft", 5u"ft", money(49.00)),
+    AvailablePanel("30 x 60 x 1/2", 30u"inch", 60u"inch", money(30.00)),
+    AvailablePanel("30 x 30 x 1/2", 30u"inch", 30u"inch", money(19.00))
   ])
 end
 
@@ -342,7 +348,7 @@ md"""
 function plot_doneness_to_cost(searcher::Searcher)
   as = allstates(searcher)
   costs = (s -> s.accumulated_cost).(as)
-  costs = (c -> ustrip(Real, u"USD", c)).(costs)
+  costs = (c -> unmoney(c)).(costs)
   done = doneness.(as)
   scatter(costs, done)
 end
@@ -485,6 +491,8 @@ function report(searcher::Searcher;
         end
         if includeCutGraph
             elt(io, :div) do
+				# Run the GraphViz dot command, inlining the SVG output
+				# into the report:
                 dot, err = runCmd(`dot -Tsvg`, io)
                 dotgraph(dot, PanelCutGraph(searcher.cheapest))
                 close(dot)
@@ -526,6 +534,18 @@ md"""
 let
   searcher = Searcher(BOULTER_PLYWOOD, wanda_box_panels[1:2])
   search(searcher)
+  # ***** debug graph transformations:
+  g = makePanelGraph(searcher.cheapest)
+  base_path = "c:/Users/Mark Nahabedian/.julia/dev/PanelCutting/src/"
+  message = "Wrote graph file"
+  @info message, path=dotgraph(base_path*"two-panels-0.svg", g)
+  applyRule!(g, addCutNodes)
+  @info message, path=dotgraph(base_path*"two-panels-1.svg", g)
+  applyRule!(g, elideBoughtPanels)
+  @info message, path=dotgraph(base_path*"two-panels-2.svg", g)
+  applyRule!(g, elideTerminalPanels)
+  @info message, path=dotgraph(base_path*"two-panels-3.svg", g)
+  # Back to our regularly scheduloed report
   report(searcher)
 end
 
@@ -589,23 +609,6 @@ let
 	report(searcher)
 end
 
-# ╔═╡ 2d6b3e56-0858-4b7a-9bd7-5d5fa2b835c9
-md"""
-# allsubtypes
-"""
-
-# ╔═╡ 97d24eee-024e-4079-948a-49245fd3c734
-function allsubtypes(t, result=Set())
-	push!(result, t)
-	for t1 in subtypes(t)
-		allsubtypes(t1, result)
-	end
-	return result
-end
-
-# ╔═╡ 52956b53-22a2-47c2-bb8d-d70ea63dcff6
-allsubtypes(AbstractPanel)
-
 # ╔═╡ 70685b9d-b660-4443-ae7f-a0659456dc4f
 md"""
   # Experiments
@@ -615,18 +618,22 @@ md"""
 +(area.(Set(wanda_box_panels))...)
 
 # ╔═╡ 2b814578-5137-4805-bedf-2c7759d87048
-typeof(20u"USD")
+# typeof(20u"USD")
 
 # ╔═╡ 7e368048-6a64-4439-8114-493f7f45ddfd
-20u"USD" isa Quantity{N, CURRENCY} where N
+# 20u"USD" isa Quantity{N, CURRENCY} where N
 
 # ╔═╡ 4049d967-f932-4eec-b6fc-711a5df79531
-zero(Quantity{Real, CURRENCY})
+# zero(Quantity{Real, CURRENCY})
+
+# ╔═╡ 758a62c8-512c-45a0-be1c-a3ec903e57b4
+Logging.global_logger()
 
 # ╔═╡ Cell order:
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
-# ╠═5f5c5ef3-efed-4afd-b304-5b37a9a81bd2
+# ╠═fd3cc42b-9718-4879-870b-c984913bf46c
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
+# ╠═e25b3bb7-93b3-4859-be30-ef912041479f
 # ╠═60fdb133-5d21-4445-90f9-3bbe49fb743b
 # ╠═ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─f6a43438-d7b0-442d-bb05-9e4488855665
@@ -656,11 +663,9 @@ zero(Quantity{Real, CURRENCY})
 # ╠═81b8240b-e3c0-427d-b57a-b07e52963f15
 # ╟─1d99d3f7-f1a7-46f4-92d5-10a5b2677276
 # ╠═f1cf4d1c-2844-4bb5-b230-2e948af91852
-# ╟─2d6b3e56-0858-4b7a-9bd7-5d5fa2b835c9
-# ╠═97d24eee-024e-4079-948a-49245fd3c734
-# ╠═52956b53-22a2-47c2-bb8d-d70ea63dcff6
 # ╟─70685b9d-b660-4443-ae7f-a0659456dc4f
 # ╠═bb38f4c1-4443-4b33-a526-b5cc653f437b
 # ╠═2b814578-5137-4805-bedf-2c7759d87048
 # ╠═7e368048-6a64-4439-8114-493f7f45ddfd
 # ╠═4049d967-f932-4eec-b6fc-711a5df79531
+# ╠═758a62c8-512c-45a0-be1c-a3ec903e57b4

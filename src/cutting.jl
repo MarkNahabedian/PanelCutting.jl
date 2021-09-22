@@ -40,7 +40,7 @@ function cut(panel::CuttablePanel,
              axis::Axis,
              at::LengthType;
              kerf = (1/8)u"inch",
-             cost = 0u"USD")
+             cost = money(0.0))
     if distance(panel, axis) < at
         return (())
     end
@@ -71,7 +71,7 @@ export cut
 
 let
     KERF = (1/8)u"inch"
-    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20u"USD"))
+    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", money(20.00)))
 
     let
 	result = cut(panel1, LengthAxis(), 61u"inch"; kerf=KERF)
@@ -106,7 +106,7 @@ end
 
 let
     KERF = (1/8)u"inch"
-    panel1 = BoughtPanel(AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", 95u"USD"))
+    panel1 = BoughtPanel(AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", money(95.00)))
     at = 22u"inch"
     cut1, cut2 = cut(panel1, LengthAxis(), at, kerf=KERF)
     @assert cut1.length == at  "got $(cut1.length), expected $(at)"

@@ -6,6 +6,9 @@ using UnitfulUS
 using UnitfulCurrency
 using Test
 
+include("test_graph_rewrite.jl")
+
+
 @testset "AllOf" begin
     ao = AllOf([1, 2, 3], (:a, :b))
     @test length(ao) == 5
@@ -43,7 +46,7 @@ example_makers[AvailablePanel] =
                          length = 4u"ft",
                          width = 2u"ft",
                          label = "example AvailablePanel",
-                         cost = 10u"USD")
+                         cost = money(10.00))
 example_makers[BoughtPanel] =
     () -> BoughtPanel(example(AvailablePanel))
 example_makers[Panel] =

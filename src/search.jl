@@ -10,7 +10,7 @@ struct SearchState
     finished::Panels{FinishedPanel}
     scrapped::Panels{ScrappedPanel}
     working::Panels{CuttablePanel}
-    accumulated_cost::Quantity{N, CURRENCY} where N
+    accumulated_cost::MoneyType
 
     function SearchState(;
                          wanted=Panels{AbstractWantedPanel}([]),
@@ -18,7 +18,7 @@ struct SearchState
                          finished=Panels{FinishedPanel}([]),
                          scrapped=Panels{ScrappedPanel}([]),
                          working=Panels{CuttablePanel}([]),
-                         accumulated_cost=0u"USD")
+                         accumulated_cost=money(0))
 	newstate = new(wanted, bought, finished, scrapped, working, accumulated_cost)
 	panels = AllOf(finished, scrapped, working)
 	for i in 1:length(panels)
@@ -107,7 +107,7 @@ SearchPriority = Real
 function priority(state::SearchState)::SearchPriority
     # Priority should get worse as the cost increases but should get better
     # as we approach completion.
-    (1 - doneness(state)) * ustrip(Real, u"USD", state.accumulated_cost)
+    (1 - doneness(state)) * unmoney(state.accumulated_cost)
 end
 
 export SearchPriority, priority

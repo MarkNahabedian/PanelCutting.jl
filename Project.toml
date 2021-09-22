@@ -7,6 +7,7 @@ version = "0.1.0"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DisplayAs = "0b91fe84-8a4c-11e9-3e1d-67c38462b6d6"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 Match = "7eb4fadd-790c-5f42-8a69-bfa0b872bfbf"
 NativeSVG = "5f95e7b2-fe07-4078-b4a7-f744f426795c"
@@ -17,6 +18,7 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulCurrency = "f5cc5b76-f814-11e9-291c-a1ea2b8c31c6"
 UnitfulUS = "7dc9378f-8956-57ef-a780-aa31cc70ff3d"
+VectorLogging = "ec499083-3b8a-4310-a81e-8622934b14d2"
 
 [compat]
 DataStructures = "0.18"
@@ -24,7 +26,7 @@ DisplayAs = "0.1"
 Match = "1"
 Plots = "1"
 Revise = "3"
-Unitful = "0.17, 1"
+Unitful = "1"
 UnitfulCurrency = "0.2"
 UnitfulUS = "0.1, 0.2"
 julia = "1"
@@ -37,5 +39,4 @@ UnitfulCurrency = "f5cc5b76-f814-11e9-291c-a1ea2b8c31c6"
 UnitfulUS = "7dc9378f-8956-57ef-a780-aa31cc70ff3d"
 
 [targets]
-test = ["InteractiveUtils", "Test",
-     "Unitful", "UnitfulUS", "UnitfulCurrency"]
+test = ["InteractiveUtils", "Test", "Unitful", "UnitfulUS", "UnitfulCurrency"]
