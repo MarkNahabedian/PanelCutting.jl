@@ -3,7 +3,7 @@ using InteractiveUtils
 using PanelCutting
 using Unitful
 using UnitfulUS
-using UnitfulCurrency
+# using UnitfulCurrency
 using Test
 
 include("test_graph_rewrite.jl")
