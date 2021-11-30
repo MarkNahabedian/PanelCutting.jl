@@ -7,16 +7,18 @@ using InteractiveUtils
 # ╔═╡ b019d660-9f77-11eb-1527-278a3e1b087c
 begin
 	using Pkg
-	Pkg.activate("c:/Users/Mark Nahabedian/.julia/dev/PanelCutting/workspace_for_binder")
-	#=
+
 	Pkg.add("HTTP")
 	using HTTP
+	
+	Pkg.add(; path="https://github.com/MarkNahabedian/NahaJuliaLib.jl")
+	using NahaJuliaLib
 
 	workspace = mktempdir()
-	from_package = "https://raw.githubusercontent.com/MarkNahabedian/PanelCutting.jl/master/"
+	from_workspace = "https://raw.githubusercontent.com/MarkNahabedian/PanelCutting.jl/master/workspace_for_binder"
 
 	for f in ["Project.toml", "Manifest.toml"]
-		from = joinpath(from_package, f)
+		from = uri_add_path(from_workspace, f)
 		to = joinpath(workspace, f)
 		response = HTTP.request("GET", from)
 		@assert response.status == 200
@@ -24,10 +26,8 @@ begin
 			write(f, String(response.body))
 		end
 	end
-	# This doesn't work: complaions that package PanelCutting is required but not installed.
-	# Pkg.activate(workspace)
+	Pkg.activate(workspace)
 	workspace
-	=#
 end
 
 # ╔═╡ ab2e6b79-24f3-4736-8e9e-8362a7efd718
