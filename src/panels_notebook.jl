@@ -1,53 +1,55 @@
 ### A Pluto.jl notebook ###
-# v0.16.0
+# v0.16.4
 
 using Markdown
 using InteractiveUtils
 
 # ╔═╡ b019d660-9f77-11eb-1527-278a3e1b087c
 begin
-  using Pkg
-  # Pkg.activate(mktempdir())
-  Pkg.activate(mkpath("c:/Users/Mark Nahabedian/.julia/dev/PanelCutting"))
-  # Pkg.add(; url="https://github.com/MarkNahabedian/VectorLogging.jl.git")
+	using Pkg
+	Pkg.activate("c:/Users/Mark Nahabedian/.julia/dev/PanelCutting/workspace_for_binder")
+	#=
+	Pkg.add("HTTP")
+	using HTTP
 
-  # Pkg.add.([
-  #       # Unitful version constrained by UnitfulCurrency
-  #   Pkg.PackageSpec(name="Unitful", version="0.17.0"),
-  #   Pkg.PackageSpec(name="UnitfulUS" #= , version="0.2.0" =#),
-  #       Pkg.PackageSpec(name="UnitfulCurrency"),
-  #       "Match",
-  #   # Pkg.PackageSpec(name="Match", version="1.1.0"),
-  #       "DataStructures",
-  #   # Pkg.PackageSpec(name="DataStructures", version="0.18.9"),
-  #       "DisplayAs",
-  #   # Pkg.PackageSpec(name="DisplayAs", version="0.1.2"),
-  #   Pkg.PackageSpec(; name="NativeSVG",
-  #                   path="c:/Users/Mark Nahabedian/.julia/dev/NativeSVG.jl"),
-  #       "Plots",
-  #       # "BackendPackage"
-  #       ])
+	workspace = mktempdir()
+	from_package = "https://raw.githubusercontent.com/MarkNahabedian/PanelCutting.jl/master/"
 
-  using Revise
-  using Unitful
-  using UnitfulUS
-  using Match
-  using DataStructures
-  # using UnitfulCurrency
-  using NativeSVG
-  using DisplayAs
-  using UUIDs
-  using Plots
-  using Printf
-  using Logging
-  using VectorLogging
-
-  using PanelCutting
-
+	for f in ["Project.toml", "Manifest.toml"]
+		from = joinpath(from_package, f)
+		to = joinpath(workspace, f)
+		response = HTTP.request("GET", from)
+		@assert response.status == 200
+		open(to, "w") do f
+			write(f, String(response.body))
+		end
+	end
+	# This doesn't work: complaions that package PanelCutting is required but not installed.
+	# Pkg.activate(workspace)
+	workspace
+	=#
 end
 
-# ╔═╡ fd3cc42b-9718-4879-870b-c984913bf46c
-PanelCutting.WantedPanel
+# ╔═╡ ab2e6b79-24f3-4736-8e9e-8362a7efd718
+begin
+	using Revise
+	using Unitful
+	using UnitfulUS
+	using Match
+	using DataStructures
+	# using UnitfulCurrency
+	using NativeSVG
+	using DisplayAs
+	using UUIDs
+	using Plots
+	using Printf
+	using Logging
+	using VectorLogging
+	using PanelCutting
+end
+
+# ╔═╡ 202a21c7-e92a-4636-9859-c27626a96edc
+WantedPanel
 
 # ╔═╡ 60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
 md"""
@@ -63,6 +65,9 @@ Logging.global_logger(VectorLogger())
 begin
   Unitful.preferunits(u"inch")
 end
+
+# ╔═╡ 0f1516c2-e12d-439c-b57d-3af903cbf3f6
+WantedPanel
 
 # ╔═╡ ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 begin
@@ -631,16 +636,18 @@ Logging.global_logger()
 
 # ╔═╡ Cell order:
 # ╠═b019d660-9f77-11eb-1527-278a3e1b087c
-# ╠═fd3cc42b-9718-4879-870b-c984913bf46c
+# ╠═ab2e6b79-24f3-4736-8e9e-8362a7efd718
+# ╠═202a21c7-e92a-4636-9859-c27626a96edc
 # ╟─60eb1ca9-cf1f-46d6-b9b9-ee9fb41723d1
 # ╠═e25b3bb7-93b3-4859-be30-ef912041479f
 # ╠═60fdb133-5d21-4445-90f9-3bbe49fb743b
+# ╠═0f1516c2-e12d-439c-b57d-3af903cbf3f6
 # ╠═ecacafd3-5f70-41d9-b6cd-6b4893186b2a
 # ╟─f6a43438-d7b0-442d-bb05-9e4488855665
 # ╠═65adef2d-9a53-4310-81a0-5dbb6d0918ca
 # ╟─85f95152-93a2-42cd-80f3-c3d7d931dbfe
 # ╟─134ac318-adb5-4939-96f7-3b70b12ffe43
-# ╠═4cd74059-f59b-46e4-be23-bfbd95e4d96d
+# ╟─4cd74059-f59b-46e4-be23-bfbd95e4d96d
 # ╠═f89c8f2e-8bdf-4d4e-8090-3f6a56e0ce85
 # ╟─dcbc9193-fa7a-435b-8f68-05b77e1d9b36
 # ╠═bd178f5d-7701-4a09-ba6d-0b80712bc3e2
