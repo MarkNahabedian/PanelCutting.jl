@@ -102,7 +102,9 @@ function smaller(p1::AbstractPanel, p2::AbstractPanel)::Bool
 end
 
 export panelUID
-export AbstractPanel, CuttablePanel, AbstractWantedPanel, TerminalPanel
+export AbstractPanel, AbstractWantedPanel, FlippedPanel, WantedPanel
+export AvailablePanel, CuttablePanel, BoughtPanel, Panel,  TerminalPanel
+export FinishedPanel, ScrappedPanel
 export LengthType
 export area, diagonal, major, minor, distance, replace0, fitsin, smaller
 
