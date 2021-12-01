@@ -15,7 +15,7 @@ Pkg.add([
     PackageSpec(;name="NativeSVG",        url="https://github.com/MarkNahabedian/NativeSVG.jl"),
     PackageSpec(;name="PanelCutting",
                 url="https://github.com/MarkNahabedian/PanelCutting.jl"),
-    PackageSpec(;name="Plots",            version="1"),
+    PackageSpec(;name="Plots",            version="1.24.3"),  # later version might be broken.
     PackageSpec(;name="Revise",           version="3"),
     PackageSpec(;name="Unitful",          #=version="1"=#),
     # PackageSpec(;name="UnitfulCurrency", version="0.2"),
@@ -23,5 +23,4 @@ Pkg.add([
     PackageSpec(;name="VectorLogging",    url="https://github.com/MarkNahabedian/VectorLogging.jl")
     ])
 
-Pkg.update()
 
