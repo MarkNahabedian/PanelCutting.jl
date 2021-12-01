@@ -1,4 +1,6 @@
 
+# julia make_environment.jl
+
 using Pkg
 
 rm("./Project.toml"; force=true)
@@ -21,4 +23,5 @@ Pkg.add([
     PackageSpec(;name="VectorLogging",    url="https://github.com/MarkNahabedian/VectorLogging.jl")
     ])
 
+Pkg.update()
 

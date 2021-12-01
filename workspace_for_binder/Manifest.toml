@@ -503,7 +503,7 @@ version = "8.44.0+0"
 
 [[PanelCutting]]
 deps = ["DataStructures", "DisplayAs", "HTTP", "InteractiveUtils", "Logging", "Markdown", "Match", "NativeSVG", "Plots", "Printf", "Revise", "UUIDs", "Unitful", "UnitfulUS", "VectorLogging"]
-git-tree-sha1 = "c9c5d6a6a1ba5a15c8a719cc1be5d1ff49883fe1"
+git-tree-sha1 = "d77c05209440ac2189b21a66124fbd770d8ec460"
 repo-rev = "master"
 repo-url = "https://github.com/MarkNahabedian/PanelCutting.jl"
 uuid = "c1372bff-64f3-4c29-a5fb-167619e966f3"
@@ -539,9 +539,9 @@ version = "1.0.15"
 
 [[Plots]]
 deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "GeometryBasics", "JSON", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs", "UnicodeFun"]
-git-tree-sha1 = "d73736030a094e8d24fdf3629ae980217bf1d59d"
+git-tree-sha1 = "9c52b09e45f9926a8e50fb7d63f25066431c2e02"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.24.3"
+version = "1.24.4"
 
 [[Preferences]]
 deps = ["TOML"]
