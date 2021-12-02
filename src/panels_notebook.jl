@@ -7,16 +7,19 @@ using InteractiveUtils
 # ╔═╡ b019d660-9f77-11eb-1527-278a3e1b087c
 begin
 	using Pkg
+	Pkg.add(; url="https://github.com/MarkNahabedian/NahaJuliaLib.jl")
+	using NahaJuliaLib
 
+	#=
+	webactivate(
+"https://raw.githubusercontent.com/MarkNahabedian/PanelCutting.jl/master/workspace_for_binder")
+=#
+	
 	Pkg.add("HTTP")
 	using HTTP
 	
-	Pkg.add(; path="https://github.com/MarkNahabedian/NahaJuliaLib.jl")
-	using NahaJuliaLib
-
-	workspace = mktempdir()
 	from_workspace = "https://raw.githubusercontent.com/MarkNahabedian/PanelCutting.jl/master/workspace_for_binder"
-
+	workspace = mktempdir()
 	for f in ["Project.toml", "Manifest.toml"]
 		from = uri_add_path(from_workspace, f)
 		to = joinpath(workspace, f)
@@ -28,6 +31,7 @@ begin
 	end
 	Pkg.activate(workspace)
 	workspace
+
 end
 
 # ╔═╡ ab2e6b79-24f3-4736-8e9e-8362a7efd718
