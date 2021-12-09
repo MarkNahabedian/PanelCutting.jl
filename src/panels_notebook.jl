@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.16.4
+# v0.17.3
 
 using Markdown
 using InteractiveUtils
@@ -13,8 +13,9 @@ begin
 	#=
 	webactivate(
 "https://raw.githubusercontent.com/MarkNahabedian/PanelCutting.jl/master/workspace_for_binder")
-=#
-	
+	=#
+
+	using Pkg
 	Pkg.add("HTTP")
 	using HTTP
 	
