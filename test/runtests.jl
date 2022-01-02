@@ -89,6 +89,29 @@ end
     # Write your tests here.
 end
 
+@testset "OrFlipped" begin
+    wanted = example(WantedPanel)
+    both = orFlipped(wanted)
+    @test both[2].was === wanted
+    @test both[1].width == both[2].length
+    @test both[1].length == both[2].width
+    @test both[2].label == "flipped $(wanted.label)"
+end
+
+@testset "multiply WantedPanel" begin
+    wanted = 2 * example(WantedPanel)
+    @test length(wanted) == 2
+    @test wanted[1].length == wanted[2].length
+    @test wanted[1].width == wanted[2].width
+    labels = map(wanted) do p; p.label; end
+    index = 1
+    while labels[1][index] == labels[2][index]
+        index += 1
+    end
+    @test map(labels) do l; parse(Int, l[index:end]); end == 1:2
+end
+
+
 @testset "Graph" begin
     g = PanelGraph()
     injest(g, :a => :b)

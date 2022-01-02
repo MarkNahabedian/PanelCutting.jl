@@ -178,12 +178,42 @@ function flipped(panel::WantedPanel)
     return FlippedPanel(panel)
 end
 
+"""
+    orFlipped(::WantedPanel)
+Return a `Vector` of `AbstractWantedPanel` consisting of the
+`WantedPanel` and possibly its corresponding `FlippedPanel`.
+"""
+function orFlipped(p::WantedPanel)::Vector{AbstractWantedPanel}
+    result = Vector{AbstractWantedPanel}([p])
+    if p.length != p.width
+        push!(result, FlippedPanel(p))
+    end
+    return result
+end
+
 wantsmatch(p1::WantedPanel, p2::WantedPanel) = p1 == p2
 wantsmatch(p1::FlippedPanel, p2::FlippedPanel) = p1 == p2
 wantsmatch(p1::WantedPanel, p2::FlippedPanel) = p1 == p2.was
 wantsmatch(p1::FlippedPanel, p2::WantedPanel) = p1.was == p2
 
-export FlippedPanel, flipped, wantsmatch
+export FlippedPanel, flipped, orFlipped, wantsmatch
+
+md"""
+bstractWantedPanel## Multiplying 
+
+We might want multiple instances of a wanted panel.  Just multiply.
+
+For multiple `FlippedPanel`s, multiply the `WantedPanel` and thenflip each one.
+"""
+
+function Base.:*(how_many::Integer, p::WantedPanel)::Vector{WantedPanel}
+    map(1:how_many) do index
+        WantedPanel(label = "$(p.label) $index",
+                    length = p.length,
+                    width = p.width)
+    end
+end
+
 
 # Testing
 let
