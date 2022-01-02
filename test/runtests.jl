@@ -111,6 +111,13 @@ end
     @test map(labels) do l; parse(Int, l[index:end]); end == 1:2
 end
 
+@testset "multiply orFlipped" begin
+    wanted = reduce(vcat,
+                    map(orFlipped,
+                        2 * example(WantedPanel)))
+    @test length(wanted) == 4
+end
+
 
 @testset "Graph" begin
     g = PanelGraph()
