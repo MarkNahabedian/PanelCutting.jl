@@ -46,6 +46,7 @@ include("panels.jl")
 include("cutting.jl")
 include("supplier.jl")
 include("search.jl")
+include("report.jl")
 include("graph.jl")
 include("generic_dot.jl")
 

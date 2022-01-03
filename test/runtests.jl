@@ -132,3 +132,4 @@ end
     @test length(query(g, :b, :c)) == 1
 end
 
+include("test_readme_examples.jl")
