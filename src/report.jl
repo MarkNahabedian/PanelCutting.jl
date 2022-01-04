@@ -96,17 +96,28 @@ function report(searcher::Searcher;
             elt(io, :table) do
                 elt(io, :thread) do
                     elt(io, :tr) do
+                        th(io, "Group")
                         th(io, "Panel")
+                        th(io, "Length")
+                        th(io, "Width")
                         th(io, "Area")
                         th(io, "%")
                     end
                 end
                 elt(io, :tbody) do
                     bought_area = sum(area.(searcher.cheapest.bought))
-                    function panel_group(panels)
+                    function panel_group(group, panels)
                         for p in panels
                             elt(io, :tr; style=style) do
+                                if p == first(panels)
+                                    td(io, group;
+                                       align="center",
+                                       valign="top",
+                                       rowspan=length(panels))
+                                end
                                 td(io, p.label; align="center")
+                                td(io, p.length; align="right")
+                                td(io, p.width; align="right")
                                 td(io, area(p); align="right")
                                 td(io, @sprintf("%.2f%%",
 						100 * convert(Float64, area(p)/bought_area));
@@ -121,19 +132,22 @@ function report(searcher::Searcher;
                             end
                         end
                     end
-                    panel_group(searcher.cheapest.bought)
-                    panel_group(searcher.cheapest.scrapped)
-                    panel_group(searcher.cheapest.finished)
+                    panel_group("bought", searcher.cheapest.bought)
+                    panel_group("scrapped", searcher.cheapest.scrapped)
+                    panel_group("left over", searcher.cheapest.working)
+                    panel_group("finished", searcher.cheapest.finished)
                 end
             end
         end
         if includeCutDiagram
-            toSVG(io, searcher.cheapest)
+            elt(io, :div) do
+                toSVG(io, searcher.cheapest)
+            end
         end
         if includeCutGraph
             elt(io, :div) do
-				# Run the GraphViz dot command, inlining the SVG output
-				# into the report:
+		# Run the GraphViz dot command, inlining the SVG output
+		# into the report:
                 dot, err = runCmd(`dot -Tsvg`, io)
                 dotgraph(dot, PanelCutGraph(searcher.cheapest))
                 close(dot)

@@ -107,7 +107,9 @@ we can search for an optimal cut pattern.
     @test length(searcher.cheapest.finished) == 5
 
     open("example_panel_cut_report.html", "w") do io
-        write(io, report(searcher).content)
+        write(io, report(searcher;
+                         includeCutDiagram=true,
+                         includeCutGraph=false).content)
     end
 end
 
