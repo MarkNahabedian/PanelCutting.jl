@@ -89,6 +89,24 @@ end
     # Write your tests here.
 end
 
+@testset "Buy more" begin
+    # Make sure we buy another AvailablePanel when none of our scraps
+    # are big enough.
+    supplier = Supplier(
+        name="test",
+        cost_per_cut=1.50,
+        kerf=(1/8)u"inch",
+        available_stock=[example(AvailablePanel)])
+    wanted = 3 * WantedPanel(label="panel",
+                             length=1.5u"ft",
+                             width=20u"inch")
+    searcher = Searcher(supplier, wanted)
+    search(searcher)
+    @test length(wanted) == length(searcher.cheapest.finished)
+    bought = Set(map(progenitor, searcher.cheapest.finished))
+    @test length(bought) == 2
+end
+
 @testset "OrFlipped" begin
     wanted = example(WantedPanel)
     both = orFlipped(wanted)

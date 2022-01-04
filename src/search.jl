@@ -217,10 +217,13 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
         return nothing
     end
     wanted = state.wanted[1]
+    cutWanted(wanted)
     # For FlippedPanel we consider both the flipped and original shapes:
     if wanted isa FlippedPanel
         cutWanted(wanted.was)
     end
+    # If there are still WantedPanels remaininig but no progress was
+    # made, buy more stock.
     if successors == 0 && !isempty(state.wanted)
         for p in searcher.supplier.available_stock
             if fitsin(state.wanted[1], p)
@@ -229,7 +232,6 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
             end
         end
     end
-    cutWanted(wanted)
 end
 
 function allstates(searcher::Searcher)
