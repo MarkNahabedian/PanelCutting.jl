@@ -4,37 +4,13 @@ md"""
 """
 
 """
-    cut(panel, axis, at, cost)::(panel1, panel2)
+    cut(panel, axis, at; kerf, cost)::(panel1, panel2)
 
 Cut panel at the specified distance along axis.
 The first returned panel is the piece cut to that distance.
 The second is what remains (accounting for kerf).
 
 An empty Tuple is returned if the cut can't be made.
-
-# Examples
-```jldoctest
-julia> panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20u"USD"))
-...
-julia> panel2, panel3 = cut(panel1, LengthAxis(), 25u"inch", 0)
-...
-julia> panel2.length == 25u"inch"
-true
-julia> panel2.width == 30u"inch"
-true
-julia> panel3.length == panel1.length - panel2.length - KERF
-true
-julia> panel3.width == 30u"inch"
-true
-julia panel2.x == panel1.x
-true
-julia> panel2.y == panel1.y
-true
-julia> panel3.x == panel1.x + panel2.length + KERF
-true
-julia> panel3.y == panel1.y
-true
-``````
 """  
 function cut(panel::CuttablePanel,
              axis::Axis,
@@ -44,9 +20,13 @@ function cut(panel::CuttablePanel,
     if distance(panel, axis) < at
         return (())
     end
-    cost = (panel.cost + cost) / 2
+    # We might short circuit the test of the function if
+    #   distance(panel, axis) == at
+    # but then we might return a BoughtPanel rather than a Panel.
+    # It does affect the cost though:
+    cost = panel.cost + (distance(panel, axis) > at ? cost : 0)
     p2xy = moveby(panel.x, panel.y, axis, at + kerf)
-    panel1 = let
+    function panel1(cost)
         (l, w) = replace0(panel.length, panel.width,
 		          moveby(zerozero..., axis, at)...)
         Panel(; length=l, width=w,
@@ -56,14 +36,16 @@ function cut(panel::CuttablePanel,
     end
     panel2l = panel.length - p2xy[1]
     panel2w = panel.width - p2xy[2]
+    # There might be no off-cut if panel was bigger than at by kerf,
+    # for example:
     if panel2l > 0u"inch" && panel2w > 0u"inch"
-        (panel1,
+        (panel1(cost / 2),
          Panel(length=panel2l, width=panel2w,
                cut_from=panel, cut_at=at, cut_axis=axis,
                x=p2xy[1], y=p2xy[2],
-	       cost=cost))
+	       cost=cost / 2))
     else
-        (panel1,)
+        (panel1(cost),)
     end
 end
 
