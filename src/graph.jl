@@ -4,7 +4,7 @@ md"""
 
 AbstractPanels are related to one another through a directed graph
 based on various relations.  Here we construct the inverse directed graph,
-which could be one-to-many, as a Dict.
+which could be one-to-many.
 """
 
 struct PanelGraph
@@ -71,12 +71,15 @@ end
 
 function makePanelGraph(state::SearchState)::PanelGraph
     rpg = PanelGraph()
-    for f in state.finished
-	injest(rpg, f)
+    function inj(panels)
+        for p in panels
+            injest(rpg, p)
+        end
     end
-    for s in state.scrapped
-	injest(rpg, s)
-    end
+    inj(state.bought)
+    inj(state.finished)
+    inj(state.scrapped)
+    inj(state.working)
     return rpg
 end
 

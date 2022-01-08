@@ -49,12 +49,7 @@ include("search.jl")
 include("report.jl")
 include("graph.jl")
 include("generic_dot.jl")
-
-
-function dotID(panel::AbstractPanel)
-    t = split(string(typeof(panel)), ".")[end]
-    "$(t)_$(string(panel.uid))"
-end
+include("dot_styles.jl")
 
 include("svg.jl")
 

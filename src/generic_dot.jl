@@ -25,11 +25,11 @@ If the file extension is `dot` then a GraphViz dot file is written.
 Otherwise a dot description of `graph` is piped through the dot command,
 the output of which will be written to `psth`.
 """
-function dotgraph(path::String, graph)
-    ext = splitext(path)[2][2:end]
+function dotgraph(path::String, graph; graph_attributes::Dict=Dict())
+    ext = last(splitext(path))[2:end]
     if ext == "dot"
         open(path, "w") do io
-            dotgraph(io, graph)
+            dotgraph(io, graph;graph_attributes=graph_attributes)
         end
     else
         # If the file type is anything other than "dot" then run the
@@ -46,7 +46,7 @@ function dotgraph(path::String, graph)
         catch e
             @warn("Error running dot: $e")
         end
-        dotgraph(dot, graph)
+        dotgraph(dot, graph; graph_attributes=graph_attributes)
         err = read(err, String)
         if length(err) > 0
             @warn("Error running dot", err=err)
@@ -59,8 +59,15 @@ md"""
     dotgraph(io::IO, graph)
 Write a dot description of `graph` to `io`.
 """
-function dotgraph(io::IO, graph)
+function dotgraph(io::IO, graph; graph_attributes::Dict=Dict())
     write(io, "digraph panels {\n")
+    if !isempty(graph_attributes)
+        write(io, "  graph [")
+        for (name, val) in graph_attributes
+            write(io, "$name = $val; ")
+        end
+        write(io, "]\n")
+    end
     for node in nodes(graph)
         dotnode(io, graph, node)
     end
@@ -72,7 +79,7 @@ end
 
 """
     dotID(node)
-Return a string to be used at the id of node in a GraphViz dot file.
+Return a string to be used as the id of node in a GraphViz dot file.
 """
 function dotID end
 
