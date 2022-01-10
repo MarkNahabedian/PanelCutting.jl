@@ -41,6 +41,7 @@ function SearchState(precursor::SearchState, cost,
 		     finished::Union{Nothing, FinishedPanel},
                      used::Union{Nothing, CuttablePanel},
 		     offcuts::CuttablePanel...)
+    ### This will not catch a newly bought panel that left no off-cut
     newly_bought = filter(x -> x isa BoughtPanel, offcuts)
     bought = if length(newly_bought) == 0
 	precursor.bought
@@ -59,11 +60,13 @@ function SearchState(precursor::SearchState, cost,
     for p in [offcuts...,
               precursor.working...]
         if p == used
+            # We just cut this panel, it's gone now.
             continue
         end
         if any((w) -> fitsin(w, p), wanted)
 	    push!(working, p)
         else
+            # p can't fit any remaining AbstractWantedPanel, scrap it:
 	    push!(newlyscrapped, ScrappedPanel(was=p))
         end
     end
@@ -99,7 +102,7 @@ md"""
 
 For A* Search we need to assign a priority to each state in the state
 space we are searching through.  A SearchState with **lower** priority
-will be considered **ahead** of one with hjigher priority.
+will be considered **ahead** of one with higher priority.
 """
 
 SearchPriority = Real
@@ -227,8 +230,9 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
     if successors == 0 && !isempty(state.wanted)
         for p in searcher.supplier.available_stock
             if fitsin(state.wanted[1], p)
-	        enqueue(searcher,
-		        SearchState(state, p.cost, nothing, nothing, BoughtPanel(p)))
+                new_state = SearchState(state, p.cost, nothing,
+                                        nothing, BoughtPanel(p))
+	        enqueue(searcher, new_state)
             end
         end
     end

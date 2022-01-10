@@ -25,27 +25,36 @@ function cut(panel::CuttablePanel,
     # but then we might return a BoughtPanel rather than a Panel.
     # It does affect the cost though:
     cost = panel.cost + (distance(panel, axis) > at ? cost : 0)
-    p2xy = moveby(panel.x, panel.y, axis, at + kerf)
-    function panel1(cost)
-        (l, w) = replace0(panel.length, panel.width,
-		          moveby(zerozero..., axis, at)...)
-        Panel(; length=l, width=w,
-              cut_from=panel, cut_at=at, cut_axis=axis,
-              x=panel.x, y=panel.y,
-	      cost=cost)
+    mult(v1, v2) = map(*, v1, v2)
+    at_vector = at * unit_vector(axis)
+    kerf_vector = kerf * unit_vector(axis)
+    cross_vector = mult(panel_lw(panel), unit_vector(other(axis)))
+    lw1 = at_vector + cross_vector
+    prev = at_vector + kerf_vector
+    xy2 = panel_xy(panel) + prev
+    lw2 = panel_lw(panel) - prev
+    if lw2[1] < 0u"inch" || lw2[2]< 0u"inch"
+        lw2 = zerovector
     end
-    panel2l = panel.length - p2xy[1]
-    panel2w = panel.width - p2xy[2]
+    area1 = area(lw1)
+    area2 = area(lw2)
+    total_area = area1 + area2
+    panel1 = Panel(; length=lw1[1], width=lw1[2],
+                   cut_from=panel, cut_at=at, cut_axis=axis,
+                   x=panel.x, y=panel.y,
+	           cost=cost * area1 / total_area)
     # There might be no off-cut if panel was bigger than at by kerf,
     # for example:
-    if panel2l > 0u"inch" && panel2w > 0u"inch"
-        (panel1(cost / 2),
-         Panel(length=panel2l, width=panel2w,
+    if area2 > zeroarea
+        # Maybe cost should be apportioned by area rather than by
+        # count?  That would slightly favor shorter cuts.
+        (panel1,
+         Panel(; length=lw2[1], width=lw2[2],
                cut_from=panel, cut_at=at, cut_axis=axis,
-               x=p2xy[1], y=p2xy[2],
-	       cost=cost / 2))
+               x=xy2[1], y=xy2[2],
+	       cost=cost * area2 / total_area))
     else
-        (panel1(cost),)
+        (panel1,)
     end
 end
 
@@ -55,20 +64,12 @@ let
     KERF = (1/8)u"inch"
     panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", money(20.00)))
 
-    let
-	result = cut(panel1, LengthAxis(), 61u"inch"; kerf=KERF)
-	@assert result == (())  "$(result) == (())"
-    end
-    let
-	result = length(cut(panel1, LengthAxis(), 29.8u"inch", kerf=KERF))
-	@assert length(result) == 1  "length($(result)) == 1"
-    end
     # Cut panel1 at 25" down LengthAxis:
     panel2, panel3 = cut(panel1, LengthAxis(), 25u"inch"; kerf=KERF)
     @assert panel2.length == 25u"inch"  """got $(panel2.length), expected $(25u"inch")"""
     @assert panel2.width == 30u"inch"
     @assert panel3.length == panel1.length - panel2.length - KERF
-    @assert panel3.width == 30u"inch"
+    @assert panel3.width == 30u"inch"   """got $(panel3.width), expected $(30u"inch")"""
     @assert panel2.x == panel1.x   "panel2.x: got $(panel2.x), expected $(panel1.x)"
     @assert panel2.y == panel1.y
     @assert panel3.x == panel1.x + panel2.length + KERF

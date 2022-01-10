@@ -5,9 +5,11 @@ using Unitful
 using UnitfulUS
 # using UnitfulCurrency
 using Test
+using Logging
 
+#=
 include("test_graph_rewrite.jl")
-
+=#
 
 @testset "AllOf" begin
     ao = AllOf([1, 2, 3], (:a, :b))
@@ -74,6 +76,17 @@ example_makers[FinishedPanel] =
                                         length = have.length))
     end
 
+@testset "cut math" begin
+    at = 8u"inch"
+    plw = [2u"ft" 1u"ft"]
+    pxy = [1u"inch" 2u"inch"]
+    vmult(a, b) = map(*, a, b)
+    lw(axis) = (at * unit_vector(axis) +
+        vmult(plw, unit_vector(other(axis))))
+    @test lw(LengthAxis()) == [at plw[2]]
+    @test lw(WidthAxis()) == [plw[1] at]
+end
+
 @testset "PanelIdentity" begin
     for paneltype in filter(isconcretetype, allsubtypes(AbstractPanel))
         @test example(paneltype) != example(paneltype)
@@ -85,17 +98,59 @@ end
     # with one another
 end
 
-@testset "trivial cut" begin
+@testset "cut: stock too short" begin
+    axis = LengthAxis()
     panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20))
-    panels = cut(panel1, LengthAxis(), panel1.length)
+    panels = cut(panel1, axis, panel1.length * 1.1)
+    @test isempty(panels)
+end
+
+# A bunch of common test assertions relating a Panel to the
+# CuttablePanel it was cut from.
+function panel_test(panel::Panel, kerf)
+    parent = panel.cut_from
+    if panel.x == parent.x && panel.y == parent.y
+        # The first panel returned by cut, the intended panel
+        if panel.cut_axis isa LengthAxis
+            @test panel.length == panel.cut_at
+            @test panel.width == parent.width
+        else
+            @test panel.width == panel.cut_at
+            @test panel.length == parent.length
+        end
+    else
+        # the off-cut
+        offset = panel.cut_at + kerf
+        if panel.cut_axis isa LengthAxis
+            @test panel.length == parent.length - offset
+            @test panel.width == parent.width
+            @test panel.x == parent.x + offset
+            @test panel.y == parent.y
+        else
+            @test panel.width == parent.width - offset
+            @test panel.length == parent.length
+            @test panel.x == parent.x
+            @test panel.y == parent.y + offset
+        end
+    end
+end
+
+@testset "trivial cut" begin
+    axis = LengthAxis()
+    kerf = (1/8)u"inch"
+    cut_cost = money(1)
+    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20))
+    panels = cut(panel1, axis, panel1.length; kerf=kerf, cost=cut_cost)
     @test length(panels) == 1
     panel2 = panels[1]
     @test panel2 isa Panel
-    @test panel2.length == panel1.length
-    @test panel2.width == panel1.width
+    @test panel2.cut_from == panel1
+    @test panel2.cut_at == panel1.length
+    @test panel2.cut_axis == axis
     @test panel2.cost == panel1.cost
     @test panel2.x == panel1.x
     @test panel2.y == panel1.y
+    panel_test(panel2, kerf)
 end
 
 @testset "close shave" begin
@@ -107,7 +162,10 @@ end
                  kerf=kerf, cost=cut_cost)
     @test length(panels) == 1
     panel2 = panels[1]
+    @test panel2.cut_from == panel1
+    @test panel2 isa Panel
     @test panel2.cost == panel1.cost + cut_cost
+    panel_test(panel2, kerf)
 end
 
 @testset "Cut" begin
@@ -119,17 +177,53 @@ end
     total_cost = panel1.cost + cut_cost
     @test panel2.length == 25u"inch"
     @test panel2.width == 30u"inch"
-    @test panel3.length == panel1.length - panel2.length - kerf
-    @test panel3.width == 30u"inch"
-    @test panel2.x == panel1.x
-    @test panel2.y == panel1.y
-    @test panel3.x == panel1.x + panel2.length + kerf
-    @test panel3.y == panel1.y
-    @test panel2.cost == total_cost / 2
-    @test panel3.cost == total_cost / 2
+    @test panel2.cut_from == panel1
+    @test panel3.cut_from == panel1
+    @test panel2.cut_at == panel3.cut_at
+    @test panel2.cut_axis == panel3.cut_axis
+    panel_test(panel2, kerf)
+    panel_test(panel3, kerf)
+    total_area = area(panel2) + area(panel3)
+    @test panel1.length == panel2.length + kerf + panel3.length
+    @test panel2.cost == total_cost * area(panel2) / total_area
+    @test panel3.cost == total_cost * area(panel3) / total_area
 end
 
-@testset "Buy more" begin
+# Each element of searcher.cheapest.bought should be the progenitor of
+# at leat one searcher.cheapest.finished panel.
+function unuesd_bought_panels(state::SearchState)
+    finished_bought = Set(map(progenitor, state.finished))
+    symdiff(Set(state.bought), finished_bought)
+end
+
+
+@testset "Search: fits in one" begin
+    supplier = Supplier(
+        name="test",
+        cost_per_cut=1.50,
+        kerf=(1/8)u"inch",
+        # 4ft long, 2ft wide:
+        available_stock=[example(AvailablePanel)])
+    wanted = 3 * WantedPanel(label="panel",
+                             length=1u"ft",
+                             width=20u"inch")
+    searcher = Searcher(supplier, wanted)
+    search(searcher)
+    @test length(wanted) == length(searcher.cheapest.finished)
+    bought = Set(map(progenitor, searcher.cheapest.finished))
+    let
+        fname = joinpath(@__DIR__, "fits-in-one.dot")
+        dotgraph(fname, makePanelGraph(searcher.cheapest);
+                 graph_attributes=GRAPH_ATTRIBUTES)
+        rundot(fname)
+        @info(fname)
+    end
+    @info("bought = $bought")
+    @test length(bought) == 1
+    @test isempty(unuesd_bought_panels(searcher.cheapest))
+end
+
+@testset "Search: buy more" begin
     # Make sure we buy another AvailablePanel when none of our scraps
     # are big enough.
     supplier = Supplier(
@@ -145,9 +239,18 @@ end
     @test length(wanted) == length(searcher.cheapest.finished)
     bought = Set(map(progenitor, searcher.cheapest.finished))
     @test length(bought) == 2
+    @test isempty(unuesd_bought_panels(searcher.cheapest))
 end
 
-@testset "suboptimal - too many buys" begin
+
+# Each element of searcher.cheapest.bought should be the progenitor of
+# at leat one searcher.cheapest.finished panel.
+function unused_bought_panels(state::SearchState)
+    symdiff(Set(state.bought),
+            Set(map(progenitor, state.finished)))
+end
+
+@testset "Search: too many buys" begin
     box_length = 12.5u"inch"
     box_width = 2u"inch"
     box_height = 1.875u"inch"
@@ -181,8 +284,16 @@ end
 	])
     searcher = Searcher(supplier, wanted_panels)
     search(searcher)
+    @test isempty(unused_bought_panels(searcher.cheapest))
+    let
+        fname = joinpath(@__DIR__, "too-many-buys.dot")
+        dotgraph(fname, makePanelGraph(searcher.cheapest);
+                 graph_attributes=GRAPH_ATTRIBUTES)
+        rundot(fname)
+        @info(fname)
+    end
     bought = Set(map(progenitor, searcher.cheapest.finished))
-    # @test length(bought) == 2
+#    @test length(bought) == 2
 end
 
 @testset "OrFlipped" begin
@@ -229,3 +340,4 @@ end
 end
 
 include("test_readme_examples.jl")
+

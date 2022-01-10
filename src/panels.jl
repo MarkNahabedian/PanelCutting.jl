@@ -107,7 +107,10 @@ export AvailablePanel, CuttablePanel, BoughtPanel, Panel,  TerminalPanel
 export FinishedPanel, ScrappedPanel
 export LengthType
 export area, diagonal, major, minor, distance, replace0, fitsin, smaller
+export panel_xy, panel_lw
 
+panel_xy(p::CuttablePanel) = [p.x p.y]
+panel_lw(p::CuttablePanel) = [p.length p.width]
 
 md"""
 ## WantedPanel
@@ -118,7 +121,7 @@ search.
 """
 
 """
-specifies a Panel we're trying to make.
+cspecifies a Panel we're trying to make.
 """
 @Base.kwdef struct WantedPanel <: AbstractWantedPanel
     uid::Int = panelUID()
@@ -349,9 +352,10 @@ struct Panel <: CuttablePanel
     width::LengthType
     cut_from::CuttablePanel
     cut_at::LengthType
-    cut_axis::Axis
-    x::LengthType
-    y::LengthType
+    cut_axis::Axis  #the axis along which cut_at is measured
+    # x and y are relative the the progenitor BoughtPanel:
+    x::LengthType   # x is along LengthAxis()
+    y::LengthType   # y is along WidthAxis()
     cost::MoneyType
     
     function Panel(; length::LengthType, width::LengthType,

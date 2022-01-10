@@ -29,31 +29,22 @@ function other(axis::WidthAxis)::Axis
     LengthAxis()
 end
 
-"""
-    moveby(x, y, axis, distance)
-return new `x`, `y` values that have been moved from the given ones
-by the specified `distance` along the specified `axis`.
-"""
-function moveby end
-
-function moveby(x, y, axis::LengthAxis, distance)
-    (x + distance, y)
-end
-
-function moveby(x, y, axis::WidthAxis, distance)
-    (x, y + distance)
-end
-
-const zerozero = (0u"inch", 0u"inch")
-
 @assert LengthAxis() isa Axis
 @assert WidthAxis() isa Axis
 @assert other(WidthAxis()) == LengthAxis()
 @assert other(LengthAxis()) == WidthAxis()
 
-@assert moveby(zerozero..., LengthAxis(), 10u"inch") == (10u"inch", 0u"inch")
-@assert moveby(zerozero..., WidthAxis(), 10u"inch") == (0u"inch", 10u"inch")
+unit_vector(::LengthAxis) = [1 0]
+unit_vector(::WidthAxis) = [0 1]
 
-export Axis, LengthAxis, WidthAxis
-export other, moveby, zerozero
+const zerovector = [0u"inch" 0u"inch"]
+
+area(v::Array{<:Number, 2}) = v[1] * v[2]
+
+@assert area([2 3]) == 6
+
+const zeroarea = area(zerovector)
+
+export Axis, LengthAxis, WidthAxis, other
+export unit_vector, zerovector, zeroarea
 
