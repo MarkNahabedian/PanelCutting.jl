@@ -46,7 +46,13 @@ function dotlabel(panel::AbstractPanel)
 end
 
 function dotlabel(panel::AvailablePanel)
-    "$(shorttype(panel))\n$(panel.label)"
+    join([
+        "$(shorttype(panel))",
+        panel.label,
+        "length: $(prettydistance(panel.length))",
+        "width: $(prettydistance(panel.width))",
+        "cost: $(panel.cost)"
+    ], "\n")
 end
 
 function dotlabel(panel::FinishedPanel)
@@ -56,7 +62,8 @@ function dotlabel(panel::FinishedPanel)
         "length: $(prettydistance(panel.length))",
         "width: $(prettydistance(panel.width))",
         "x: $(prettydistance(panel.x))",
-        "y: $(prettydistance(panel.y))"
+        "y: $(prettydistance(panel.y))",
+        "cost: $(panel.cost)"
     ], "\n")
 end
 
@@ -65,8 +72,11 @@ function dotlabel(panel::Panel)
         "$(shorttype(panel))",
         "length: $(prettydistance(panel.length))",
         "width: $(prettydistance(panel.width))",
+        "at: $(prettydistance(panel.cut_at))",
+        panel.cut_axis,
         "x: $(prettydistance(panel.x))",
-        "y: $(prettydistance(panel.y))"
+        "y: $(prettydistance(panel.y))",
+        "cost: $(panel.cost)"
     ], "\n")
 end
 
