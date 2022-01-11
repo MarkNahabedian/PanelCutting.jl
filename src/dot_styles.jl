@@ -4,24 +4,27 @@ using Printf
 
 export GRAPH_ATTRIBUTES
 
-#=
-It appears that graphviz version 2.50.0 (20211204.2007)
-does not respect graph attributes when generating SVG output.
 
-For now I'm editing the SVG files by hand:
+function graph_attributes(::PanelGraph)
+    Dict([
+        (:bgcolor, "black"),
+        (:color, "white")
+    ])
+end
 
-replacing: stroke="black"
-with:      stroke="white"
+function node_attributes(::PanelGraph)
+    Dict([
+        (:color, "white"),
+        (:fontcolor, "white")
+    ])
+end
 
-replacing: <text
-with:      <text fill="white"
+function edge_attributes(::PanelGraph)
+    Dict([
+        (:color, "white"),
+    ])
+end
 
-
-=#
-GRAPH_ATTRIBUTES = Dict([
-    ("bgcolor", "black"),
-    ("color", "white")
-])
 
 function prettydistance(x)
     s = @sprintf("%.3f", svgdistance(x))
@@ -51,7 +54,7 @@ function dotlabel(panel::AvailablePanel)
         panel.label,
         "length: $(prettydistance(panel.length))",
         "width: $(prettydistance(panel.width))",
-        "cost: $(panel.cost)"
+        @sprintf("cost: %.2f", panel.cost)
     ], "\n")
 end
 
@@ -63,7 +66,7 @@ function dotlabel(panel::FinishedPanel)
         "width: $(prettydistance(panel.width))",
         "x: $(prettydistance(panel.x))",
         "y: $(prettydistance(panel.y))",
-        "cost: $(panel.cost)"
+        @sprintf("cost: %.2f", panel.cost)
     ], "\n")
 end
 
@@ -73,16 +76,23 @@ function dotlabel(panel::Panel)
         "length: $(prettydistance(panel.length))",
         "width: $(prettydistance(panel.width))",
         "at: $(prettydistance(panel.cut_at))",
-        panel.cut_axis,
+        pretty(panel.cut_axis),
         "x: $(prettydistance(panel.x))",
         "y: $(prettydistance(panel.y))",
-        "cost: $(panel.cost)"
+        @sprintf("cost: %.2f", panel.cost)
     ], "\n")
 end
 
 dotshape(panel::AbstractPanel) = "box"
 
-function dotnode(io::IO, graph, panel::AbstractPanel)
-    label = dotlabel(panel)
-    write(io, """  "$(dotID(panel))" [label="$label"; shape=$(dotshape(panel))]\n""")
+function dotnode(io::IO, graph::PanelGraph, panel::AbstractPanel)
+    attrs = dot_attributes_string(
+        ;
+        label=dotlabel(panel),
+        shape=dotshape(panel))
+    write(io, """  "$(dotID(panel))" [$attrs]\n""")
+end
+
+function dotedge(io::IO, graph::PanelGraph, from, to)
+    diarc(io, from, to)
 end

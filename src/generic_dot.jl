@@ -4,6 +4,75 @@ md"""
 """
 
 md"""
+The `graph` argumrnt to these functions should support the
+following methods:
+
+  - nodes
+  - arcs
+  - graph_attributes
+  - node_attributes
+  - edge_attributes
+
+See the documentation for those methods.
+
+Default *no-op* methods are provided here where reasionable.
+"""
+
+export  nodes, arcs, graph_attributes, node_attributes, edge_attributes
+
+
+"""
+   nodes(graph)
+Return a collection of all of the nodes of `graph`.
+"""
+
+
+"""
+    edges(graph)
+Retirn a collection of all of the edges of `graph`.
+Each element of the collections is a Pair associating one
+nodeof the graph with another.
+"""
+
+
+"""
+    graph_attributes(graph)
+Return a Dict of graph level attributes (for the Dot `graph` statement)
+"""
+graph_attributes(graph) = Dict{Symbol, AbstractString}()
+
+
+"""
+    node_attributes(graph)
+Return a Dict of node attributes that should apply to all nodes of `graph`.
+"""
+node_attributes(graph) = Dict{Symbol, AbstractString}()
+
+
+"""
+    edge_attributes(graph)
+Return a Dict of attributes that should apply to all edges of `graph`.
+"""
+edge_attributes(graph) = Dict{Symbol, AbstractString}()
+
+
+
+"""
+    dotescape(::AbstractString)::AbstractString
+Escape an `ID` in the GraphVi Dot language.  'ID' is
+the fundamental token in Dot.
+"""
+function dotescape(s::AbstractString)::AbstractString
+    "\"" *
+        replace(s, "\"" => "\\\"") *
+        "\""
+end
+
+
+dotescape(s::Symbol) = dotescape(string(s))
+
+
+md"""
 Write a GraphViz dot file describing the panel cutting progression
 described in a SearchState.
 """
@@ -25,11 +94,11 @@ If the file extension is `dot` then a GraphViz dot file is written.
 Otherwise a dot description of `graph` is piped through the dot command,
 the output of which will be written to `psth`.
 """
-function dotgraph(path::String, graph; graph_attributes::Dict=Dict())
+function dotgraph(path::String, graph)
     ext = last(splitext(path))[2:end]
     if ext == "dot"
         open(path, "w") do io
-            dotgraph(io, graph;graph_attributes=graph_attributes)
+            dotgraph(io, graph)
         end
     else
         # If the file type is anything other than "dot" then run the
@@ -46,7 +115,7 @@ function dotgraph(path::String, graph; graph_attributes::Dict=Dict())
         catch e
             @warn("Error running dot: $e")
         end
-        dotgraph(dot, graph; graph_attributes=graph_attributes)
+        dotgraph(dot, graph)
         err = read(err, String)
         if length(err) > 0
             @warn("Error running dot", err=err)
@@ -59,20 +128,21 @@ md"""
     dotgraph(io::IO, graph)
 Write a dot description of `graph` to `io`.
 """
-function dotgraph(io::IO, graph; graph_attributes::Dict=Dict())
+function dotgraph(io::IO, graph)
     write(io, "digraph panels {\n")
-    if !isempty(graph_attributes)
-        write(io, "  graph [")
-        for (name, val) in graph_attributes
-            write(io, "$name = $val; ")
+    for (word, fun) in (("graph", graph_attributes),
+                        ("node", node_attributes),
+                        ("edge", edge_attributes))
+        attrs = fun(graph)
+        if !isempty(attrs)
+            write(io, "$word [$(dot_attributes_string(attrs))]\n")
         end
-        write(io, "]\n")
     end
     for node in nodes(graph)
         dotnode(io, graph, node)
     end
     for arc in arcs(graph)
-        diarc(io, graph, arc.first, arc.second)
+        dotedge(io, graph, arc.first, arc.second)
     end
     write(io, "}\n")
 end
@@ -84,16 +154,37 @@ Return a string to be used as the id of node in a GraphViz dot file.
 function dotID end
 
 function dotnode(io::IO, graph, node)
-    write(io, """  "$(dotID(node))"\n""")
+    write(io, """  "$(dotescape(dotID(node)))"\n""")
 end
 
-function diarc(io::IO, graph, arc::Pair)
-    diarc(io, graph, arc.from, arc.to)
+function dotedge(io::IO, graph, from, to)
+    diarc(io, from, to)
 end
 
-function diarc(io::IO, graph, from, to)
-    write(io, """  "$(dotID(from))" -> "$(dotID(to))"\n""")
+function dot_attributes_string(attrs::Dict)::String
+    a = []
+    for (key, val) in attrs
+        push!(a, "$(dotescape(key))=$(dotescape(val))")
+    end
+    join(a, "; ")
 end
 
-export dotgraph, dotID, rundot, dotnode, diarc
+function dot_attributes_string(; kwargs...)::String
+    attrs = []
+    for (key, val) in kwargs
+        push!(attrs, "$(dotescape(key))=$(dotescape(val))")
+    end
+    join(attrs, "; ")
+end
+
+function diarc(io::IO, arc::Pair, kwargs...)
+    diarc(io, arc.first, arc.second; kwargs...)
+end
+
+function diarc(io::IO, from, to; kwargs...)
+    attrs = dot_attributes_string(; kwargs...)
+    write(io, "  $(dotescape(dotID(from))) -> $(dotescape(dotID(to))) [$attrs]\n")
+end
+
+export dotescape, dotgraph, dotID, rundot, dotnode, dotedge, diarc, dot_attributes_string
 

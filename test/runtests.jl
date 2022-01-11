@@ -213,8 +213,7 @@ end
     bought = Set(map(progenitor, searcher.cheapest.finished))
     let
         fname = joinpath(@__DIR__, "fits-in-one.dot")
-        dotgraph(fname, makePanelGraph(searcher.cheapest);
-                 graph_attributes=GRAPH_ATTRIBUTES)
+        dotgraph(fname, makePanelGraph(searcher.cheapest))
         rundot(fname)
         @info(fname)
     end
@@ -287,13 +286,12 @@ end
     @test isempty(unused_bought_panels(searcher.cheapest))
     let
         fname = joinpath(@__DIR__, "too-many-buys.dot")
-        dotgraph(fname, makePanelGraph(searcher.cheapest);
-                 graph_attributes=GRAPH_ATTRIBUTES)
+        dotgraph(fname, makePanelGraph(searcher.cheapest))
         rundot(fname)
         @info(fname)
     end
     bought = Set(map(progenitor, searcher.cheapest.finished))
-#    @test length(bought) == 2
+    @test length(bought) == 2
 end
 
 @testset "OrFlipped" begin
