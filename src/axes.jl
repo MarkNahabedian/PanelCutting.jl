@@ -34,6 +34,8 @@ end
 @assert other(WidthAxis()) == LengthAxis()
 @assert other(LengthAxis()) == WidthAxis()
 
+pretty(axis::Axis) = typeof(axis)
+
 unit_vector(::LengthAxis) = [1 0]
 unit_vector(::WidthAxis) = [0 1]
 
