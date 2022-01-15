@@ -14,6 +14,7 @@ using DisplayAs
 using UUIDs
 using Plots
 using Logging
+using NahaGraphs
 
 
 # Work around issues with UnitfulCurrency

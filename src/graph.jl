@@ -1,4 +1,3 @@
-
 md"""
 # Panel Graph
 
@@ -7,94 +6,74 @@ based on various relations.  Here we construct the inverse directed graph,
 which could be one-to-many.
 """
 
+export PanelGraph, injest, makePanelGraph
+export nodes, edges, query
+
 struct PanelGraph
-    arcs::Set{Pair}
+    graph::DiGraph
     
-    PanelGraph() = new(Set{Pair{AbstractPanel, AbstractPanel}}())
+    PanelGraph() = new(DiGraph())
 end
 
-function injest(rpg::PanelGraph, pair::Pair)
-    push!(rpg.arcs, pair)
+
+# Delegation to the underlying DiGraph:
+
+NahaGraphs.add_edge!(pg::PanelGraph, edge::Pair) = add_edge!(pg.graph, edge)
+
+function Base.haskey(pg::PanelGraph, key)::Bool
+    haskey(pg.graph, key)
 end
 
-function Base.haskey(rpg::PanelGraph, key)::Bool
-    for p in rpg.arcs
-	if p.first == key
-	    return true
-	end
-    end
-    return false
+Base.keys(pg::PanelGraph) = keys(pg.graph)
+
+Base.values(pg::PanelGraph) = values(pg.graph)
+
+NahaGraphs.nodes(pg::PanelGraph) = union(keys(pg), values(pg))
+
+NahaGraphs.edges(pg::PanelGraph) = edges(pg.graph)
+
+Base.getindex(pg::PanelGraph, key) =
+    (p -> p.second).(filter(p -> p.first == key, edges(pg)))
+
+NahaGraphs.query(pg::PanelGraph, from, to) = query(pg.graph, from, to)
+
+
+# Building the graph from the panel structure
+
+function injest(pg::PanelGraph, pair::Pair)
+    add_edge!(pg.graph, pair)
 end
 
-Base.keys(rpg::PanelGraph) =
-    Set([p.first for p in rpg.arcs])
-
-Base.values(rpg::PanelGraph) =
-    Set([p.second for p in rpg.arcs])
-
-nodes(rpg::PanelGraph) = union(keys(rpg), values(rpg))
-
-arcs(rpg::PanelGraph) = rpg.arcs
-
-Base.getindex(rpg::PanelGraph, key) =
-    (p -> p.second).(filter(p -> p.first == key, rpg.arcs))
-
-function query(pg::PanelGraph, from, to)
-    function querytest(elt, val)
-        if val isa Type
-            elt isa val
-        else
-            elt == val
-        end
-    end
-    filter(p -> querytest(p.first, from) && querytest(p.second, to),
-           pg.arcs)
+function injest(pg::PanelGraph, panel::AbstractPanel)
+    # No-op default method
 end
 
-function injest(rpg::PanelGraph, panel::AbstractPanel)
+function injest(pg::PanelGraph, panel::BoughtPanel)
+    add_edge!(pg, (panel.was) => panel)
+    injest(pg, panel.was)
 end
 
-function injest(rpg::PanelGraph, panel::BoughtPanel)
-    push!(rpg.arcs, (panel.was) => panel)
-    injest(rpg, panel.was)
+function injest(pg::PanelGraph, panel::TerminalPanel)
+    add_edge!(pg, (panel.was) => panel)
+    injest(pg, panel.was)
 end
 
-function injest(rpg::PanelGraph, panel::TerminalPanel)
-    push!(rpg.arcs, (panel.was) => panel)
-    injest(rpg, panel.was)
-end
-
-function injest(rpg::PanelGraph, panel::Panel)
-    push!(rpg.arcs, (panel.cut_from) => panel)
-    injest(rpg, panel.cut_from)
+function injest(pg::PanelGraph, panel::Panel)
+    add_edge!(pg, (panel.cut_from) => panel)
+    injest(pg, panel.cut_from)
 end
 
 function makePanelGraph(state::SearchState)::PanelGraph
-    rpg = PanelGraph()
+    pg = PanelGraph()
     function inj(panels)
         for p in panels
-            injest(rpg, p)
+            injest(pg, p)
         end
     end
     inj(state.bought)
     inj(state.finished)
     inj(state.scrapped)
     inj(state.working)
-    return rpg
+    return pg
 end
-
-function transform!(rpg::PanelGraph, addarcs, removearcs)
-    setdiff!(rpg.arcs, removearcs)
-    union!(rpg.arcs, addarcs)
-    return nothing
-end
-
-function applyRule!(rpg::PanelGraph, rule)
-    nodes(rpg) .|>
-	(node -> rule(rpg, node)) .|>
-	(ar -> transform!(rpg, ar...))
-end
-
-export PanelGraph, nodes, arcs, query, injest, makePanelGraph
-export transform, applyRule!
 

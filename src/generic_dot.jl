@@ -8,7 +8,7 @@ The `graph` argumrnt to these functions should support the
 following methods:
 
   - nodes
-  - arcs
+  - edges
   - graph_attributes
   - node_attributes
   - edge_attributes
@@ -21,7 +21,7 @@ See the documentation for those methods.
 Default *no-op* methods are provided here where reasonable.
 """
 
-export  nodes, arcs, graph_attributes, node_attributes, edge_attributes
+export  nodes, edges, graph_attributes, node_attributes, edge_attributes
 
 
 """
@@ -144,7 +144,7 @@ function dotgraph(io::IO, graph)
     for node in nodes(graph)
         dotnode(io, graph, node)
     end
-    for arc in arcs(graph)
+    for arc in edges(graph)
         dotedge(io, graph, arc.first, arc.second)
     end
     write(io, "}\n")
