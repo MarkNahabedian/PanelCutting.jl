@@ -12,10 +12,13 @@ following methods:
   - graph_attributes
   - node_attributes
   - edge_attributes
+  - dotID
+  - dotnode
+  - dotedge
 
 See the documentation for those methods.
 
-Default *no-op* methods are provided here where reasionable.
+Default *no-op* methods are provided here where reasonable.
 """
 
 export  nodes, arcs, graph_attributes, node_attributes, edge_attributes
@@ -29,7 +32,7 @@ Return a collection of all of the nodes of `graph`.
 
 """
     edges(graph)
-Retirn a collection of all of the edges of `graph`.
+Return a collection of all of the edges of `graph`.
 Each element of the collections is a Pair associating one
 nodeof the graph with another.
 """
@@ -59,7 +62,7 @@ edge_attributes(graph) = Dict{Symbol, AbstractString}()
 
 """
     dotescape(::AbstractString)::AbstractString
-Escape an `ID` in the GraphVi Dot language.  'ID' is
+Escape an `ID` in the GraphViz Dot language.  'ID' is
 the fundamental token in Dot.
 """
 function dotescape(s::AbstractString)::AbstractString
@@ -147,16 +150,28 @@ function dotgraph(io::IO, graph)
     write(io, "}\n")
 end
 
+
 """
     dotID(node)
 Return a string to be used as the id of node in a GraphViz dot file.
 """
 function dotID end
 
+
+"""
+    dotnode(io::IO, graph, node)
+Write a Dot node statement to `io` describing `node`.
+"""
 function dotnode(io::IO, graph, node)
     write(io, """  "$(dotescape(dotID(node)))"\n""")
 end
 
+
+"""
+    dotedge(io::IO, graph, from, to)
+Write a Dot edge statement to `io` describing an edge from
+`from` to `to`.
+"""
 function dotedge(io::IO, graph, from, to)
     diarc(io, from, to)
 end
