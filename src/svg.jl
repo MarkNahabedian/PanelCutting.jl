@@ -21,7 +21,8 @@ const STYLESHEET = """
     stroke-dasharray: 4 4;
   }
   .factory-edge {
-    stroke-width: 1px; stroke: blue;
+    stroke-width: 1px;
+    stroke: blue;
     fill: none;
   }
   .finished {
@@ -29,11 +30,11 @@ const STYLESHEET = """
     fill: rgba(0%, 50%, 0%, 50%);
   }
   text.finished {
-	color: white;
+    color: white;
     text-anchor: middle;
-	font-family: sans-serif;
+    font-family: sans-serif;
     font-size: 2px;
-	vector-effect: non-scaling-stroke;
+    vector-effect: non-scaling-stroke;
   }
 """
 
