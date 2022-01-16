@@ -2,24 +2,21 @@
 
 using Printf
 
-export GRAPH_ATTRIBUTES
-
-
-function graph_attributes(::PanelGraph)
+function NahaGraphs.graph_attributes(::PanelGraph)
     Dict([
         (:bgcolor, "black"),
         (:color, "white")
     ])
 end
 
-function node_attributes(::PanelGraph)
+function NahaGraphs.node_attributes(::PanelGraph)
     Dict([
         (:color, "white"),
         (:fontcolor, "white")
     ])
 end
 
-function edge_attributes(::PanelGraph)
+function NahaGraphs.edge_attributes(::PanelGraph)
     Dict([
         (:color, "white"),
     ])
@@ -35,7 +32,7 @@ function prettydistance(x)
     return s
 end
 
-function dotID(panel::AbstractPanel)
+function NahaGraphs.dotID(panel::AbstractPanel)
     t = split(string(typeof(panel)), ".")[end]
     "$(t)_$(string(panel.uid))"
 end
@@ -85,7 +82,7 @@ end
 
 dotshape(panel::AbstractPanel) = "box"
 
-function dotnode(io::IO, graph::PanelGraph, panel::AbstractPanel)
+function NahaGraphs.dotnode(io::IO, graph::PanelGraph, panel::AbstractPanel)
     attrs = dot_attributes_string(
         ;
         label=dotlabel(panel),
@@ -93,6 +90,6 @@ function dotnode(io::IO, graph::PanelGraph, panel::AbstractPanel)
     write(io, """  "$(dotID(panel))" [$attrs]\n""")
 end
 
-function dotedge(io::IO, graph::PanelGraph, from, to)
+function NahaGraphs.dotedge(io::IO, graph::PanelGraph, from, to)
     diarc(io, from, to)
 end

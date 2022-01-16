@@ -49,9 +49,7 @@ include("supplier.jl")
 include("search.jl")
 include("report.jl")
 include("graph.jl")
-include("generic_dot.jl")
 include("dot_styles.jl")
-
 include("svg.jl")
 
 #  include("./panels_notebook.jl")

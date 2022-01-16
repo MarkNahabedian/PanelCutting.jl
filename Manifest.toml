@@ -456,8 +456,8 @@ uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "0.3.6"
 
 [[NahaGraphs]]
-deps = ["Logging", "UUIDs"]
-git-tree-sha1 = "2fb9a253de4fed921a1c6114a1d0e3e2313edbc8"
+deps = ["Logging", "Markdown", "UUIDs"]
+git-tree-sha1 = "d9b6887e66f1d9eedc2bf0e81e0319edbfe35ff6"
 repo-rev = "master"
 repo-url = "https://github.com/MarkNahabedian/NahaGraphs.jl"
 uuid = "fd225a7d-cc45-47cf-8742-8ffafb057088"

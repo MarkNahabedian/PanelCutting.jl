@@ -15,7 +15,6 @@ struct PanelGraph
     PanelGraph() = new(DiGraph())
 end
 
-
 # Delegation to the underlying DiGraph:
 
 NahaGraphs.add_edge!(pg::PanelGraph, edge::Pair) = add_edge!(pg.graph, edge)

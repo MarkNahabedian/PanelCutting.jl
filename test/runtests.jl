@@ -6,6 +6,7 @@ using UnitfulUS
 # using UnitfulCurrency
 using Test
 using Logging
+using NahaGraphs
 
 #=
 include("test_graph_rewrite.jl")
