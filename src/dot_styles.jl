@@ -14,7 +14,7 @@ function prettydistance(x)
     if '.' in s
         s = rstrip(s, '0')
     end
-    return s
+    return "$(s)inch"
 end
 
 function NahaGraphs.dotID(panel::AbstractPanel)
