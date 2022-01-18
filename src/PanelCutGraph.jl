@@ -12,7 +12,7 @@ struct PanelCutGraph
         pcg = new(state, pg, DiGraph(pg.graph))
         applyRule!(pcg, insertCutNodes)
         applyRule!(pcg, elideBoughtPanels)
-        # applyRule!(pcg, elideTerminalPanels)
+        applyRule!(pcg, elideTerminalPanels)
         pcg
     end
 
