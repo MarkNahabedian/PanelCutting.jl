@@ -2,24 +2,9 @@
 
 using Printf
 
-function NahaGraphs.graph_attributes(::PanelGraph)
-    Dict([
-        (:bgcolor, "black"),
-        (:color, "white")
-    ])
-end
+export PanelsDotStyle
 
-function NahaGraphs.node_attributes(::PanelGraph)
-    Dict([
-        (:color, "white"),
-        (:fontcolor, "white")
-    ])
-end
-
-function NahaGraphs.edge_attributes(::PanelGraph)
-    Dict([
-        (:color, "white"),
-    ])
+struct PanelsDotStyle <: AbstractDotStyleWhiteOnBlack
 end
 
 
@@ -37,7 +22,7 @@ function NahaGraphs.dotID(panel::AbstractPanel)
     "$(t)_$(string(panel.uid))"
 end
 
-function shorttype(panel::AbstractPanel)
+function shorttype(panel)
     split(string(typeof(panel)), ".")[end]
 end
 
@@ -82,14 +67,10 @@ end
 
 dotshape(panel::AbstractPanel) = "box"
 
-function NahaGraphs.dotnode(io::IO, graph::PanelGraph, panel::AbstractPanel)
-    attrs = dot_attributes_string(
-        ;
-        label=dotlabel(panel),
-        shape=dotshape(panel))
-    write(io, """  "$(dotID(panel))" [$attrs]\n""")
+function NahaGraphs.node_attributes(::PanelsDotStyle, node)
+    Dict([
+        (:label, dotlabel(node)),
+        (:shape, dotshape(node))
+    ])
 end
 
-function NahaGraphs.dotedge(io::IO, graph::PanelGraph, from, to)
-    diarc(io, from, to)
-end

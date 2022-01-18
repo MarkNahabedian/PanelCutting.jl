@@ -29,9 +29,9 @@ version = "1.16.1+1"
 
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "926870acb6cbcf029396f2f2de030282b6bc1941"
+git-tree-sha1 = "6e39c91fb4b84dcb870813c91674bdebb9145895"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.11.4"
+version = "1.11.5"
 
 [[ChangesOfVariables]]
 deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
@@ -457,7 +457,7 @@ version = "0.3.6"
 
 [[NahaGraphs]]
 deps = ["Logging", "Markdown", "UUIDs"]
-git-tree-sha1 = "d9b6887e66f1d9eedc2bf0e81e0319edbfe35ff6"
+git-tree-sha1 = "5621bfff85b2ed95f71937c0ebd0d2b12fb1fc15"
 repo-rev = "master"
 repo-url = "https://github.com/MarkNahabedian/NahaGraphs.jl"
 uuid = "fd225a7d-cc45-47cf-8742-8ffafb057088"

@@ -151,6 +151,17 @@ function unuesd_bought_panels(state::SearchState)
     symdiff(Set(state.bought), finished_bought)
 end
 
+function make_test_graphs(state::SearchState, basename::String)
+    pg = makePanelGraph(state)
+    function make_graph(g, fname)
+        dotgraph(fname, g, PanelsDotStyle())
+        rundot(fname)
+        @info(fname)
+    end
+    make_graph(pg, joinpath(@__DIR__, "$basename.dot"))
+    make_graph(PanelCutGraph(state, pg),
+               joinpath(@__DIR__, "$basename-pcg.dot"))
+end
 
 @testset "Search: fits in one" begin
     supplier = Supplier(
@@ -166,12 +177,7 @@ end
     search(searcher)
     @test length(wanted) == length(searcher.cheapest.finished)
     bought = Set(map(progenitor, searcher.cheapest.finished))
-    let
-        fname = joinpath(@__DIR__, "fits-in-one.dot")
-        dotgraph(fname, makePanelGraph(searcher.cheapest))
-        rundot(fname)
-        @info(fname)
-    end
+    make_test_graphs(searcher.cheapest, "fits-in-one")
     @info("bought = $bought")
     @test length(bought) == 1
     @test isempty(unuesd_bought_panels(searcher.cheapest))
@@ -239,12 +245,7 @@ end
     searcher = Searcher(supplier, wanted_panels)
     search(searcher)
     @test isempty(unused_bought_panels(searcher.cheapest))
-    let
-        fname = joinpath(@__DIR__, "too-many-buys.dot")
-        dotgraph(fname, makePanelGraph(searcher.cheapest))
-        rundot(fname)
-        @info(fname)
-    end
+    make_test_graphs(searcher.cheapest, "too-many-buys")
     bought = Set(map(progenitor, searcher.cheapest.finished))
     @test length(bought) == 2
 end
