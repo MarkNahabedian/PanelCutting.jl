@@ -27,7 +27,7 @@ const STYLESHEET = """
   }
   .finished {
     stroke: none;
-    fill: rgba(0%, 50%, 0%, 50%);
+    fill: rgb(0%, 50%, 0%);
   }
   text.finished {
     color: white;
