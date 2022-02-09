@@ -34,6 +34,7 @@ const STYLESHEET = """
     text-anchor: middle;
     font-family: sans-serif;
     font-size: 2px;
+    font-weight: bold;
     vector-effect: non-scaling-stroke;
   }
 """
@@ -87,7 +88,7 @@ function panelrect(io::IO, panel::AbstractPanel, cssclass::String)
     end
 end
 
-export panelrect, panelrect
+export panelrect
 
 
 """
