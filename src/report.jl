@@ -39,7 +39,7 @@ function report(searcher::Searcher;
         end
         elt(io, :p) do
             write(io, "Report of what stock to purchase and what" *
-                " cuts to make to get panels of these aizes")
+                " cuts to make to get panels of these sizes")
         end
         function th(io, heading)
             elt(io, :th) do
