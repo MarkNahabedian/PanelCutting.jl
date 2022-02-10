@@ -149,7 +149,7 @@ function report(searcher::Searcher;
 		# Run the GraphViz dot command, inlining the SVG output
 		# into the report:
                 dot, err = runCmd(`dot -Tsvg`, io)
-                dotgraph(dot, PanelCutGraph(searcher.cheapest))
+                dotgraph(dot, PanelCutGraph(searcher.cheapest), PanelsDotStyle())
                 close(dot)
                 err = read(err)
                 if length(err) > 0
