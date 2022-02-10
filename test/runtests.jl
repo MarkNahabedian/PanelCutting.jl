@@ -8,9 +8,6 @@ using Test
 using Logging
 using NahaGraphs
 
-#=
-include("test_graph_rewrite.jl")
-=#
 
 @testset "AllOf" begin
     ao = AllOf([1, 2, 3], (:a, :b))
