@@ -106,11 +106,11 @@ we can search for an optimal cut pattern.
     # stock used and number of cuts) is in `searcher.cheapest`.
     @test length(searcher.cheapest.finished) == 5
 
-    open("example_panel_cut_report.html", "w") do io
-        write(io, report(searcher;
-                         includeCutDiagram=true,
-                         includeCutGraph=true).content)
-    end
+    rm("example_panel_cut_report.html"; force=true)
+    report(searcher;
+           includeCutDiagram=true,
+           includeCutGraph=true,
+           filename="example_panel_cut_report.html")
 end
 
 end

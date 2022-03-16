@@ -2,6 +2,35 @@
 export report
 
 """
+    inPluto()::Bool
+Return true if the notebook is being run in Pluto, artyher than
+directly in Julia (e.g. command line or REPL).
+"""
+function inPluto()::Bool
+    isdefined(Main, :PlutoRunner)
+end
+
+
+"""
+    callerFile()
+Return the path of the file of the function that called callerFile's caller.
+Also return the line number.
+"""
+function callerFile()
+    st = stacktrace(backtrace())
+    #=
+    for i in 1:length(st)
+        frame = st[i]
+        @info("Frame: $i", frame.func, frame.file, frame.line)
+    end
+    =#
+    frame = st[3]
+    return string(frame.file), frame.line
+end
+
+
+
+"""
     runCmd(cmd::Cmd, cmdOutput::IO)::IO
 Run the external command `cmd`, which will write output to `cmdOutput`.
 The stream that's returnd can be written to to provide inoput to the
@@ -28,7 +57,8 @@ our cut search and results.
 """
 function report(searcher::Searcher;
                 includeCutDiagram=true,
-                includeCutGraph=false)
+                includeCutGraph=false,
+                filename)
     io = IOBuffer()
     function elt(f, io, tagname; attrs...)
         NativeSVG.element(f, tagname, io; attrs...)
@@ -158,6 +188,34 @@ function report(searcher::Searcher;
             end
         end
     end
-    return HTML(String(take!(io)))
+    fragment = HTML(String(take!(io)))
+    if inPluto()
+        fragment
+    else
+        f, _ = callerFile()
+        ofile = if filename == nothing
+            joinpath(dirname(f), splitext(basename(f))[1]*"html")
+        else
+            filename
+        end
+        open(ofile, "w") do out
+            write(out, report_html_wrapper(fragment).content)
+                      end
+        ofile
+    end
+end
+
+function report_html_wrapper(content::HTML)
+    io = IOBuffer()
+    NativeSVG.element(:html, io) do
+        NativeSVG.element(:head, io) do
+        end
+        NativeSVG.element(:body, io) do
+            NativeSVG.element(:p, io) do
+                write(io, content.content)
+            end
+        end
+    end
+    HTML(String(take!(io)))
 end
 
