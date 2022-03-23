@@ -58,7 +58,7 @@ our cut search and results.
 function report(searcher::Searcher;
                 includeCutDiagram=true,
                 includeCutGraph=false,
-                filename)
+                filename=nothing)
     io = IOBuffer()
     function elt(f, io, tagname; attrs...)
         NativeSVG.element(f, tagname, io; attrs...)
