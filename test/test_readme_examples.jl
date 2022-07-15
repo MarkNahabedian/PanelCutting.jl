@@ -32,7 +32,7 @@ sitting on top of the bottom and the ends inset bwetween the sides.
 
 Also note that we do not yet include the thickness of stock when
 selecting material to cut.  so far my projects have been simple enough
-that I've only needed one thickness of stock.  I the furure we should
+that I've only needed one thickness of stock.  In the furure we should
 also model stock thickness and material type.
 """
 
