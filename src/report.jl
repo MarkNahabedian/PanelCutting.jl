@@ -200,7 +200,7 @@ function report(searcher::Searcher;
         end
         open(ofile, "w") do out
             write(out, report_html_wrapper(fragment).content)
-                      end
+        end
         @info "Wrote $ofile"
         ofile
     end

@@ -2,7 +2,7 @@
 example_makers = Dict{Type, Function}()
 
 """
-Make a new example of the spoecified type.
+Make a new example of the specified type.
 """
 function example(t::Type{<:AbstractPanel})
     example_makers[t]()
