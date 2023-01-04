@@ -1,9 +1,6 @@
 
 md"""
 # Describing the Cuts using SVG
-
-We use (locally modified, pull request pending) `NativeSVG.jl` to
-generate SVG code.
 """
 
 """
@@ -46,6 +43,7 @@ const STYLESHEET = """
 Unitful.register(@thismodule)
 =#
 
+
 """
 Turn a Unitful length quantity to a floating point number we can use in SVG.
 """
@@ -53,38 +51,84 @@ function svgdistance(d)::Real
     ustrip(Real, u"inch", d)
 end
 
+
+function xmlComment(text::AbstractString)
+    XML.Comment(text)
+end
+
+
 """
-Draw an SVG `rect` representing a panel.
+    elt(f, tagname::AbstractString, things...)
+    elt(tagname::AbstractString, things...)
+
+Return an XML element.  `f` is called with a single argument: either
+an XML.AbstractXMLNode or a Pair describing an XML attribute to be added to the
+resulting element.
 """
-function panelrect(io::IO, panel::AbstractPanel, cssclass::String)
+function elt(f::Function, tagname::AbstractString, things...)
+    attributes = OrderedDict()
+    children = Vector{Union{CData, Comment, Element, String}}()
+    function add_thing(s)
+        if s isa Pair
+            attributes[Symbol(s.first)] = string(s.second)
+        elseif s isa AbstractString
+            push!(children, s)
+        elseif s isa Number
+            push!(children, string(s))
+        elseif s isa XML.AbstractXMLNode
+            push!(children, s)
+        elseif s isa Nothing
+            # Ignore
+        else
+            error("unsupported XML content: $s")
+        end
+    end
+    for thing in things
+        add_thing(thing)
+    end
+    f(add_thing)
+    XML.Element(tagname, attributes, children)
+end
+
+elt(tagname::AbstractString, things...) = elt(identity, tagname, things...)
+
+
+"""
+    panelrect(panel::AbstractPanel, cssclass::String)
+
+Return an SVG element that will draw a rectangle representing the panel.
+"""
+function panelrect(panel::AbstractPanel, cssclass::String)
     # It's confusing that panel.width corresponds to SVG length
     # and panel.length corresponds to SVG width.  Sorry.
-    # This is a consequence of the x and y coordinaces of a panel
+    # This is a consequence of the x and y coordinates of a panel
     # corresponding with the panel's length and width respectively.
-    g(io) do
-	write(io, string("<!-- $(panel.label): ",
-			 "$(panel.width) by $(panel.length), ",
-			 "at $(panel.x), $(panel.y) -->\n"))
-	rect(io; class=cssclass,
-	     x=svgdistance(panel.x),
-	     y=svgdistance(panel.y),
-	     width=svgdistance(panel.length),
-	     height=svgdistance(panel.width)) do
-		 if panel isa FinishedPanel
-		     title(io) do
-			 print(io, "$(panel.length) × $(panel.width)")
-		     end
-		 end
-	     end
+    elt("g") do a
+        a(xmlComment(string("<!-- $(panel.label): ",
+			    "$(panel.width) by $(panel.length), ",
+			    "at $(panel.x), $(panel.y) -->\n")))
+        a(elt("rect") do a
+              a.([:class =>cssclass,
+	          :x => svgdistance(panel.x),
+	          :y => svgdistance(panel.y),
+	          :width => svgdistance(panel.length),
+	          :height => svgdistance(panel.width)])
+              if panel isa FinishedPanel
+                  elt("title") do a
+                      a("$(panel.length) × $(panel.width)")
+                  end
+	      end
+          end)
 	if panel isa FinishedPanel
-	    NativeSVG.text(io;
-			   class = cssclass,
-			   x = svgdistance(panel.x + panel.length / 2),
-			   y = svgdistance(panel.y + panel.width / 2)) do
-			       write(io, "$(panel.length) × $(panel.width)")
-		           end
+            a(elt("text") do a
+                  a.([
+                      :class => cssclass,
+	              :x => svgdistance(panel.x + panel.length / 2),
+	              :y => svgdistance(panel.y + panel.width / 2),
+                      "$(panel.length) × $(panel.width)"
+                  ])
+              end)
 	end
-
     end
 end
 
@@ -97,55 +141,50 @@ and SVG edge.
 """
 const SVG_PANEL_MARGIN = 2u"inch"
 
-function toSVG(state::SearchState)
-    buf = IOBuffer()
-    toSVG(buf, state)
-    return take!(buf)
-end
-
 export SVG_PANEL_MARGIN, toSVG
 
 
-function toSVG(io::IO, state::SearchState)::Nothing
+function toSVG(state::SearchState)::XML.Element
     rpg = makePanelGraph(state)
+    #=
     write(io, """<?xml version="1.0" encoding="UTF-8"?>\n""")
     write(io, """<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n""")
     write(io, """          "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n""")
+    =#
     # Outermost SVG:
     vpwidth = svgdistance(maximum(major.(keys(rpg))) + 2 * SVG_PANEL_MARGIN)
     vpheight = svgdistance(sum(minor.(filter(p -> p isa BoughtPanel, keys(rpg)))) + 
 	2 * SVG_PANEL_MARGIN)
-    svg(io; xmlns="http://www.w3.org/2000/svg",
-	width="90%",
-	viewBox="0 0 $(vpwidth) $(vpheight)",
-	style="background-color: pink") do
-	    style(io; type="text/css") do
-		write(io, STYLESHEET)
+    elt("svg",
+        :xmlns => "http://www.w3.org/2000/svg",
+	:width =>"90%",
+	:viewBox => "0 0 $(vpwidth) $(vpheight)",
+        :style => "background-color: pink",
+        elt("style", :type => "text/css", STYLESHEET),
+        elt("g", :class => "everything") do a
+	    y = SVG_PANEL_MARGIN
+	    for stock in filter((p) -> p isa BoughtPanel, keys(rpg))
+		# We want to have the longer dimension of panel run
+		# horizontally.  If so, we can apply a 90 degree rotation.
+		# Here we just translate successive stock panels (BoughtPanel)
+		# by its minor dimension and margins to space them out.
+		# The toSVG method of BoughtPanel will deal with rotation.
+		tx = svgdistance(SVG_PANEL_MARGIN)
+		ty = svgdistance(y)
+                a(elt("g",
+                      :transform => "translate($(tx), $(ty))",
+                      toSVG(stock, rpg)))
+                y += minor(stock) + SVG_PANEL_MARGIN
 	    end
-	    g(io; class="everything") do
-		y = SVG_PANEL_MARGIN
-		for stock in filter((p) -> p isa BoughtPanel, keys(rpg))
-		    # We want to have the longer dimension of panel run
-		    # horizontally.  If so, we can apply a 90 degree rotation.
-		    # Here we just translate successive stock panels (BoughtPanel)
-		    # by its minor dimension and margins to space them out.
-		    # The toSVG method of BoughtPanel will deal with rotation.
-		    tx = svgdistance(SVG_PANEL_MARGIN)
-		    ty = svgdistance(y)
-		    g(io; transform="translate($(tx), $(ty))") do
-			toSVG(io, stock, rpg)
-			y += minor(stock) + SVG_PANEL_MARGIN
-		    end
-		end
-	    end
-	end
+        end)
 end
 
-function toSVG(io::IO, panel::AbstractPanel, rpg::PanelGraph)::Nothing
+        
+function toSVG(panel::AbstractPanel, rpg::PanelGraph)
     # Do nothing, We only draw certain types of panel.
 end
 
-function toSVG(io::IO, panel::BoughtPanel, rpg::PanelGraph)::Nothing
+function toSVG(panel::BoughtPanel, rpg::PanelGraph)
     # We want to have the longer dimension of panel run horizontally.
     # This is already anticipated above wnere we calculate the SVG viewBox.
     transform = ""
@@ -154,19 +193,20 @@ function toSVG(io::IO, panel::BoughtPanel, rpg::PanelGraph)::Nothing
 	ty = svgdistance(panel.width)
 	transform = "rotate(90) translate($tx $ty)"
     end
-    g(io; class="BoughtPanel",
-      transform=transform) do
-	  panelrect(io, panel, "factory-edge")
-	  for p in rpg[panel]
-	      toSVG(io, p, rpg)
-	  end
-      end
+    elt("g",
+        :class => "BoughtPanel",
+        :transform =>transform) do a
+            a(panelrect(panel, "factory-edge"))
+	    for p in rpg[panel]
+	        a(toSVG(p, rpg))
+	    end
+        end
 end
 
-function toSVG(io::IO, panel::Panel, rpg::PanelGraph)::Nothing
-    g(io; class="Panel") do
+function toSVG(panel::Panel, rpg::PanelGraph)
+    elt("g", :class => "Panel") do a
 	for p in rpg[panel]
-	    toSVG(io, p, rpg)
+	    a(toSVG(p, rpg))
 	end
 	endX = panel.x + panel.length
 	endY = panel.y + panel.width
@@ -179,13 +219,12 @@ function toSVG(io::IO, panel::Panel, rpg::PanelGraph)::Nothing
 	end
 	startX, startY, endX, endY = svgdistance.((startX, startY, endX, endY))
 	d = "M $startX $startY L $endX $endY"
-	NativeSVG.path(io; class="cut", d=d)
+        a(elt("path", :d => d))
     end
 end
 
-function toSVG(io::IO, panel::FinishedPanel, rpg::PanelGraph)::Nothing
-    g(io; class="FinishedPanel") do
-	panelrect(io, panel, "finished")
-    end
+function toSVG(panel::FinishedPanel, rpg::PanelGraph)
+    elt("g", :class => "FinishedPanel",
+        panelrect(panel, "finished"))
 end
 

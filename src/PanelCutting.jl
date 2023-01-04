@@ -9,7 +9,7 @@ using UnitfulUS
 using Match
 using DataStructures
 using InteractiveUtils
-using NativeSVG
+using XML
 using DisplayAs
 using UUIDs
 using Plots
