@@ -42,7 +42,7 @@ function NahaGraphs.dotnode(io::IO, graph::PanelCutGraph, panel::AbstractPanel)
     dotnode(io, graph.pg, panel)
 end
 
- function NahaGraphs.dotedge(io::IO, graph::PanelCutGraph, from, to)
+function NahaGraphs.dotedge(io::IO, graph::PanelCutGraph, from, to)
     dotedge(io, graph.pg, from, to)
 end
 
