@@ -152,8 +152,9 @@ function make_test_graphs(state::SearchState, basename::String)
     pg = makePanelGraph(state)
     function make_graph(g, fname)
         dotgraph(fname, g, PanelsDotStyle())
-        rundot(fname)
-        @info(fname)
+        # dot isn't installed in the GitHub test environment:
+        # rundot(fname)
+        # @info(fname)
     end
     make_graph(pg, joinpath(@__DIR__, "$basename.dot"))
     make_graph(PanelCutGraph(state, pg),
