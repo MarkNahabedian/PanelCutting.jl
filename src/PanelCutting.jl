@@ -52,6 +52,7 @@ include("graph.jl")
 include("dot_styles.jl")
 include("PanelCutGraph.jl")
 include("svg.jl")
+include("box.jl")
 
 #  include("./panels_notebook.jl")
 

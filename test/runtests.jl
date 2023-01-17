@@ -295,3 +295,5 @@ include("test_callerFile.jl")
 
 include("test_readme_examples.jl")
 
+include("test_box.jl")
+
