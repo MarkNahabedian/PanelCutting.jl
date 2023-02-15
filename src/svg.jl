@@ -1,4 +1,7 @@
 
+export svgdistance, elt, panelrect
+
+
 md"""
 # Describing the Cuts using SVG
 """
