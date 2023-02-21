@@ -1,5 +1,6 @@
 """
     Allof(iterables...)
+
 combine the iterables into a single iterable.
 """
 struct AllOf
