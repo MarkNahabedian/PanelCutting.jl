@@ -1,5 +1,5 @@
 
-export svgdistance, elt, panelrect
+export STYLESHEET, svgdistance, elt, panelrect
 
 
 md"""
@@ -48,6 +48,8 @@ Unitful.register(@thismodule)
 
 
 """
+    svgdistance(d)
+
 Turn a Unitful length quantity to a floating point number we can use in SVG.
 """
 function svgdistance(d)::Real
