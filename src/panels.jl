@@ -1,28 +1,5 @@
 
-md"""
-# Panels
 
-We start with a goal of producing a set of WantedPanels of specified
-sizes.
-
-We then select an AvailablePanel and cut it.  Each cut
-potentially produces two new offcut Panels.
-
-When one of these Panels matches a WanterPanel we associate that Panel
-with the WantedPanel using a FinishedPanel.
-
-We give Panels an X and Y 'origin' origin as well as a length (along
-x) and width to simplify SVG generation.(along y)
-
-"""
-
-md"""
-    panelUID()
-Generate a unique identifier for each panel when it is created.
-We do this because Julia does not have a notion of equality that
-distibguishes between two separately created immutable structs
-with the same contents
-"""
 let
   local nextID = 1
   global function panelUID()::Int
@@ -32,6 +9,16 @@ let
   end
 end
 
+@doc """
+    panelUID()
+
+Generate a unique identifier for each panel when it is created.
+We do this because Julia does not have a notion of equality that
+distibguishes between two separately created immutable structs
+with the same contents.
+""" panelUID
+
+
 abstract type AbstractPanel end
 abstract type CuttablePanel <: AbstractPanel end
 abstract type AbstractWantedPanel <: AbstractPanel end
@@ -39,6 +26,12 @@ abstract type TerminalPanel <: AbstractPanel end
 
 LengthType = Unitful.Length
 
+
+"""
+    area(panel)
+
+Return the area of the panel.
+"""
 function area(panel::AbstractPanel)
     panel.length * panel.width
 end
@@ -47,12 +40,22 @@ function diagonal(panel::AbstractPanel)
     sqrt(panel.length * panel.length + panel.width * panel.width)
 end
 
-"""Return the greater of the Panel's two dimensions."""
+
+"""
+    major(panel)
+
+Return the greater of the Panel's two dimensions.
+"""
 function major(p::AbstractPanel)
     max(p.length, p.width)
 end
 
-"""Return the lesser of the Panel's two dimensions."""
+
+"""
+    minor(panel)
+
+Return the lesser of the Panel's two dimensions.
+"""
 function minor(p::AbstractPanel)
     min(p.length, p.width)
 end
@@ -64,8 +67,11 @@ end
 function distance(panel::AbstractPanel, axis::LengthAxis)
     panel.length
 end
+
 	
 """
+    replace0(defaultX, defaultY, newX, newY)
+
 Return newX and newY so long as they are not 0.
 If zero, use the corresponding default value.
 """
@@ -73,16 +79,22 @@ function replace0(defaultX, defaultY, newX, newY)
     ((newX == zero(newX) ? defaultX : newX),
      (newY == zero(newY) ? defaultY : newY))
 end
-	
+
+
 """
-See if small can be cut from big
+    fitsin(small::AbstractPanel, big::AbstractPanel)::Bool
+
+See if small can be cut from big.
 """
 function fitsin(small::AbstractPanel, big::AbstractPanel)::Bool
     return minor(small) <= minor(big) && major(small) <= major(big)
 end
 
+
 """
-an ordering function for sorting panels by size.
+    smaller(p1::AbstractPanel, p2::AbstractPanel)::Bool
+
+An ordering function for sorting panels by size.
 smaller(p1, p2) does not imply fitsin(p1, p2).
 """
 function smaller(p1::AbstractPanel, p2::AbstractPanel)::Bool
@@ -104,7 +116,8 @@ end
 export panelUID
 export AbstractPanel, AbstractWantedPanel, FlippedPanel, WantedPanel
 export AvailablePanel, CuttablePanel, BoughtPanel, Panel,  TerminalPanel
-export FinishedPanel, ScrappedPanel
+export FinishedPanel, ScrappedPanel, Panels
+export progenitor
 export LengthType
 export area, diagonal, major, minor, distance, replace0, fitsin, smaller
 export panel_xy, panel_lw
@@ -112,16 +125,13 @@ export panel_xy, panel_lw
 panel_xy(p::CuttablePanel) = [p.x p.y]
 panel_lw(p::CuttablePanel) = [p.length p.width]
 
-md"""
-## WantedPanel
 
-WantedPanel described a panel that we need to have cut from some sheet
+"""
+    WantedPanel
+
+WantedPanel describes a panel that we need to have cut from some sheet
 stock.  A Set of AbstractWantedPanels establishes the goal of our
 search.
-"""
-
-"""
-cspecifies a Panel we're trying to make.
 """
 @Base.kwdef struct WantedPanel <: AbstractWantedPanel
     uid::Int = panelUID()
@@ -130,11 +140,9 @@ cspecifies a Panel we're trying to make.
     label
 end
 
-export WantedPanel
 
-
-md"""
-## FlippedPanel
+"""
+    FlippedPanel
 
 FlippedPanel wraps a WantedPanel to indicate that its want can be
 satisfied by a panel even if its length and width are swapped.
@@ -144,12 +152,7 @@ care about grain direction.
 
 When either the original or the flipped panel is finished then its
 counterpart will be removed from the unsatisfied wants as well.  The
-function wantsmatch is used for this test.
-"""
-
-"""
-Specifies that a Panel will satisfy the want of our was panel
-even if its length and width are swapped.
+function `wantsmatch` is used for this test.
 """
 @Base.kwdef struct FlippedPanel <: AbstractWantedPanel
     uid::Int = panelUID()
@@ -181,8 +184,10 @@ function flipped(panel::WantedPanel)
     return FlippedPanel(panel)
 end
 
+
 """
     orFlipped(::WantedPanel)
+
 Return a `Vector` of `AbstractWantedPanel` consisting of the
 `WantedPanel` and possibly its corresponding `FlippedPanel`.
 """
@@ -200,14 +205,6 @@ wantsmatch(p1::WantedPanel, p2::FlippedPanel) = p1 == p2.was
 wantsmatch(p1::FlippedPanel, p2::WantedPanel) = p1.was == p2
 
 export FlippedPanel, flipped, orFlipped, wantsmatch
-
-md"""
-bstractWantedPanel## Multiplying 
-
-We might want multiple instances of a wanted panel.  Just multiply.
-
-For multiple `FlippedPanel`s, multiply the `WantedPanel` and thenflip each one.
-"""
 
 function Base.:*(how_many::Integer, p::WantedPanel)::Vector{WantedPanel}
     map(1:how_many) do index
@@ -257,12 +254,10 @@ end
 export uniqueWantedPanels
 
 
-md"""
-## AvailablePanel
 """
+    AvailablePanel
 
-md"""
-A sheet of plywood we can buy frm the lumber yard.
+A sheet of plywood we can buy from the lumber yard.
 """
 @Base.kwdef struct AvailablePanel <: AbstractPanel
     uid::Int = panelUID()
@@ -290,15 +285,12 @@ function Base.propertynames(panel::AbstractPanel, private::Bool=false)
     (:x, :y, fieldnames(typeof(panel))...)
 end
 
-export AvailablePanel
 
-
-md"""
-## BoughtPanel
+"""
+    BoughtPanel
 
 a BoughtPanel is created to wrap an AvailablePanel when we add it to the working set.  This ensured that when it is cut it has a distinct identity from any other BoughtPanel of the same size.
 """
-
 @Base.kwdef struct BoughtPanel <: CuttablePanel
     uid::Int = panelUID()
     was::AvailablePanel
@@ -333,18 +325,12 @@ let
     @assert BoughtPanel(ap) != BoughtPanel(ap)
 end
 
-export BoughtPanel
 
-
-md"""
-## Panel
+"""
+    Panel
 
 Panel represents a panel that has been cut from an AvailablePanel but
 does not yet match an AbstractWantedPanel.
-"""
-
-"""
-a panel that is in progress.
 """
 struct Panel <: CuttablePanel
     uid::Int
@@ -353,7 +339,7 @@ struct Panel <: CuttablePanel
     cut_from::CuttablePanel
     cut_at::LengthType
     cut_axis::Axis  #the axis along which cut_at is measured
-    # x and y are relative the the progenitor BoughtPanel:
+    # x and y are relative to the progenitor BoughtPanel:
     x::LengthType   # x is along LengthAxis()
     y::LengthType   # y is along WidthAxis()
     cost::MoneyType
@@ -371,16 +357,13 @@ struct Panel <: CuttablePanel
     end
 end
 
-export Panel
 
-
-md"""
-## ScrappedPanel
+"""
+    ScrappedPanel
 
 ScrappedPanel wraps a Panel that is not big enough to cut any
 remaining AbstractWantedPanel from.
 """
-
 @Base.kwdef struct ScrappedPanel <: TerminalPanel
     uid::Int = panelUID()
     was::Panel    # We should never be scrapping an AvailablePanel.
@@ -405,18 +388,12 @@ function Base.propertynames(panel::ScrappedPanel; private=false)
     (:x, :y, :length, :width, :label, :cost, fieldnames(typeof(panel))...)
 end
 
-export ScrappedPanel
 
-
-md"""
-## FinishedPanel
+"""
+    FinishedPanel
 
 FinishedPanel wraps a Panel that matches an AbstractWantedPanel and
 associates that AbstractWantedPanel with the cut Panel.
-"""
-
-"""
-matches an AbstractedWantedPanel that we've successfully made.
 """
 struct FinishedPanel <: TerminalPanel
     uid::Int
@@ -447,13 +424,13 @@ function Base.propertynames(panel::FinishedPanel, private::Bool=false)
     (:x, :y, :length, :width, :label, :cost, fieldnames(typeof(panel))...)
 end
 
-export FinishedPanel
 
+"""
+    Panels
 
-md"""
-## Collections of Panels
+An immutable collections of Panels
 
-Our SearchState objects contain several collections of panels.  We'd
+Our `SearchState` objects contain several collections of panels.  We'd
 like these collections to be immutable, like the SearchStates
 themselves.
 
@@ -463,19 +440,13 @@ states, these collections could change in the following ways:
   * a WantedPanel and possibly its flipped counterpart, might be removed and a FinishedPanel added
   * one or two CuttablePanels added to stock panels
   * CuttablePanels moved from stock to waste if they are too small for any remaining wanted panels
-
-Here we implement an immutable collection type Panels based on Tuple to support these operations.
 """
-
 Panels{T} = Tuple{Vararg{T}} where T <: AbstractPanel
 
-export Panels
 
-md"""
-## Progenitor
 """
+    progenitor(panel)
 
-md"""
 Return the BoughtPanel that this panel was cut from.
 
 An AbstractPanel is its own progenitor.
@@ -485,9 +456,9 @@ A WantedPanel is its own progenitor.
 A FlippedPanel is its own progenitor.
 	    
 progenitor is used in the overlap test: panels
-can not overlap if they have different progeniyors.
+can not overlap if they have different progenitors.
 """
-function Progenitor end
+function progenitor end
 
 progenitor(panel::AbstractPanel) = panel
 
@@ -499,13 +470,14 @@ function progenitor(panel::Panel)::BoughtPanel
     progenitor(panel.cut_from)
 end
 
-export progenitor
 
+# Testing if panels overlap:
 
-md"""
-## Testing if Panels Overlap
 """
+    PanelOverlapError
 
+An error that is thrown when panels that shouldn'y overlap do.
+"""
 struct PanelOverlapError <: Exception
     panel1::AbstractPanel
     panel2::AbstractPanel
@@ -516,6 +488,7 @@ end
 function Base.showerror(io::IO, e::PanelOverlapError)
     print(io, "PanelOverlapError: \n  ", e.panel1, "\n  ", e.panel2)
 end
+
 
 # Spans
 
