@@ -27,6 +27,7 @@ end
 
 include("example_makers.jl")
 
+include("test_overlap.jl")
 
 @testset "cut math" begin
     at = 8u"inch"

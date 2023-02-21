@@ -44,6 +44,7 @@ export money, MoneyType, unmoney
 include("AllOf.jl")
 include("axes.jl")
 include("panels.jl")
+include("overlap.jl")
 include("cutting.jl")
 include("supplier.jl")
 include("search.jl")
