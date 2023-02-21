@@ -85,21 +85,27 @@ BOULTER_PLYWOOD = Supplier(
     available_stock = [
         AvailablePanel(
             label = "1/4 5 × 5 Baltic Birch",
+            material = "Baltic Birch",
+            thickness = (1/4)u"inch",
             length = 5u"ft",
             width = 5u"ft",
-            cost=69.00   # I've not been able to get UnitfulCurrency to work
+            cost = 84.00   # I've not been able to get UnitfulCurrency to work
         ),
         AvailablePanel(
             label = "1/4 30 × 60 Baltic Birch",
+            material = "Baltic Birch",
+            thickness = (1/4)u"inch",
             length = 60u"inch",
             width = 30u"inch",
-            cost=42.00
+            cost = 51.00
         ),
         AvailablePanel(
             label = "1/4 30 × 30 Baltic Birch",
+            material = "Baltic Birch",
+            thickness = (1/4)u"inch",
             length = 30u"inch",
             width = 30u"inch",
-            cost=26.00)
+            cost = 36.00)
       ])
 ```
 
