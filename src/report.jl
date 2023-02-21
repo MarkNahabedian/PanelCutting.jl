@@ -1,5 +1,5 @@
 
-export report
+export inPluto, report
 
 """
     inPluto()::Bool
