@@ -53,7 +53,7 @@ end
 
 @testset "cut: stock too short" begin
     axis = LengthAxis()
-    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20))
+    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 0.5u"inch", 20))
     panels = cut(panel1, axis, panel1.length * 1.1)
     @test isempty(panels)
 end
@@ -92,7 +92,7 @@ end
     axis = LengthAxis()
     kerf = (1/8)u"inch"
     cut_cost = money(1)
-    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20))
+    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 0.5u"inch", 20))
     panels = cut(panel1, axis, panel1.length; kerf=kerf, cost=cut_cost)
     @test length(panels) == 1
     panel2 = panels[1]
@@ -109,7 +109,7 @@ end
 @testset "close shave" begin
     kerf= (1/8)u"inch"
     cut_cost = 1
-    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20))
+    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 0.5u"inch", 20))
     panels = cut(panel1, LengthAxis(),
                  panel1.length - kerf;
                  kerf=kerf, cost=cut_cost)
@@ -124,7 +124,7 @@ end
 @testset "Cut" begin
     kerf= (1/8)u"inch"
     cut_cost = 1
-    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 20))
+    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 0.5u"inch", 20))
     panel2, panel3 = cut(panel1, LengthAxis(), 25u"inch";
                          kerf=kerf, cost=cut_cost)
     total_cost = panel1.cost + cut_cost
@@ -171,7 +171,8 @@ end
         available_stock=[example(AvailablePanel)])
     wanted = 3 * WantedPanel(label="panel",
                              length=1u"ft",
-                             width=20u"inch")
+                             width=20u"inch",
+                             thickness = 0.5u"inch")
     searcher = Searcher(supplier, wanted)
     search(searcher)
     @test length(wanted) == length(searcher.cheapest.finished)
@@ -192,7 +193,8 @@ end
         available_stock=[example(AvailablePanel)])
     wanted = 3 * WantedPanel(label="panel",
                              length=1.5u"ft",
-                             width=20u"inch")
+                             width=20u"inch",
+                             thickness = 0.5u"inch")
     searcher = Searcher(supplier, wanted)
     search(searcher)
     @test length(wanted) == length(searcher.cheapest.finished)
@@ -220,15 +222,18 @@ end
         WantedPanel(
 	    label="bottom",
 	    length=box_length,
-	    width=box_width),
+	    width=box_width,
+            thickness = stock_thickness),
         (2 * WantedPanel(
 	    label="side",
 	    length=box_length,
-	    width=box_height - stock_thickness + rabbet_depth))...,
+	    width=box_height - stock_thickness + rabbet_depth,
+            thickness = stock_thickness))...,
         ((compartment_count + 1) *
 	    WantedPanel(label="divider",
 		        width=(box_height - stock_thickness + rabbet_depth),
-		        length=(box_width - 2 * stock_thickness + 2 * rabbet_depth))...)
+		        length=(box_width - 2 * stock_thickness + 2 * rabbet_depth),
+                        thickness = stock_thickness)...)
     ]
     supplier = Supplier(
 	name = "www.midwestproducts.com",
@@ -239,6 +244,7 @@ end
 		label="basswood 24 × 4 × 1/8",
 		length=24u"inch",
 		width=4u"inch",
+                thickness = stock_thickness,
 		cost=4)
 	])
     searcher = Searcher(supplier, wanted_panels)

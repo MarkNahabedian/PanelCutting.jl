@@ -137,6 +137,8 @@ search.
     uid::Int = panelUID()
     length::LengthType
     width::LengthType
+    thickness::LengthType
+    material = ""
     label
 end
 
@@ -169,12 +171,14 @@ function Base.getproperty(panel::FlippedPanel, prop::Symbol)
 	:length  => was.width
 	:width   => was.length
 	:label   => "flipped $(was.label)"
+        :thickness => was.thickness
+        :material  => was.material
 	_        => getfield(panel, prop)
     end
 end
     
 function Base.propertynames(panel::FlippedPanel, private::Bool=false)
-    (:length, :width, :label, fieldnames(typeof(panel))...)
+    (:length, :width, :label, :thickness, :material, fieldnames(typeof(panel))...)
 end
 
 function flipped(panel::WantedPanel)
@@ -210,14 +214,16 @@ function Base.:*(how_many::Integer, p::WantedPanel)::Vector{WantedPanel}
     map(1:how_many) do index
         WantedPanel(label = "$(p.label) $index",
                     length = p.length,
-                    width = p.width)
+                    width = p.width,
+                    thickness = p.thickness,
+                    material = p.material)
     end
 end
 
 
 # Testing
 let
-    w = WantedPanel(width=1u"inch", length=2u"inch", label="foo")
+    w = WantedPanel(width=1u"inch", length=2u"inch", label="foo", thickness= 0.5u"inch")
     f = flipped(w)
     @assert w.length == f.width
     @assert w.width == f.length
@@ -228,6 +234,7 @@ let
     @assert wantsmatch(f, w)
     @assert flipped(WantedPanel(width=10u"inch",
 				length=10u"inch",
+                                thickness= 0.5u"inch",
 				label="square")) isa WantedPanel
 end
 
@@ -264,13 +271,17 @@ A sheet of plywood we can buy from the lumber yard.
     label::String
     width::LengthType
     length::LengthType
+    thickness::LengthType
+    material = ""
     cost::MoneyType
 end
 
 function AvailablePanel(label::String,
 			width::LengthType, length::LengthType,
+                        thickness::LengthType,
 			cost::MoneyType)
-    AvailablePanel(label=label, width=width, length=length, cost=cost)
+    AvailablePanel(label=label, width=width, length=length,
+                   thickness=thickness, cost=cost)
 end
 		
 function Base.getproperty(panel::AvailablePanel, prop::Symbol)
@@ -309,19 +320,26 @@ function Base.getproperty(panel::BoughtPanel, prop::Symbol)
 	:width   => was.width
 	:label   => was.label
 	:cost    => was.cost
+        :thickness => was.thickness
+        :material  => was.material
 	_        => getfield(panel, prop)	
     end
 end
 
 function Base.propertynames(panel::BoughtPanel, private::Bool=false)
-    (:x, :y, :length, :width, :label, :cost, fieldnames(typeof(panel))...)
+    (:x, :y, :length, :width, :label, :cost, :thickness, :material,
+     fieldnames(typeof(panel))...)
 end
 
 # Though two BoughtPanels might be derived from the same
 # AvailablePanel, we need to be able to distinguish between them
 # because making a cut in one of them does not alter tje other.
 let
-    ap = AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", money(95.00))
+    ap = AvailablePanel(; label = "4 x 8 x 1/2",
+                        width = 4u"ft",
+                        length = 8u"ft",
+                        thickness = 0.5u"inch",
+                        cost = money(95.00))
     @assert BoughtPanel(ap) != BoughtPanel(ap)
 end
 
@@ -357,6 +375,19 @@ struct Panel <: CuttablePanel
     end
 end
 
+function Base.getproperty(panel::Panel, prop::Symbol)
+    cut_from = getfield(panel, :cut_from)
+    @match prop begin
+        :thickness => cut_from.thickness
+        :material  => cut_from.material
+	_          => getfield(panel, prop)
+    end
+end
+
+function Base.propertynames(panel::Panel, private::Bool=false)
+    (:thickness, :material, fieldnames(typeof(panel))...)
+end
+
 
 """
     ScrappedPanel
@@ -380,12 +411,15 @@ function Base.getproperty(panel::ScrappedPanel, prop::Symbol)
 	:width   => was.width
 	:label   => "scrapped $(panel.uid)"
 	:cost    => was.cost
+        :thickness => was.thickness
+        :material  => was.material
 	_        => getfield(panel, prop)
     end
 end
 
 function Base.propertynames(panel::ScrappedPanel; private=false)
-    (:x, :y, :length, :width, :label, :cost, fieldnames(typeof(panel))...)
+    (:x, :y, :length, :width, :label, :cost, :thickness, :material,
+     fieldnames(typeof(panel))...)
 end
 
 
@@ -416,12 +450,15 @@ function Base.getproperty(panel::FinishedPanel, prop::Symbol)
 	:width     => was.width
 	:label     => getfield(panel, :wanted).label
 	:cost      => was.cost
+        :thickness => was.thickness
+        :material  => was.material
 	_          => getfield(panel, prop)
     end
 end
 
 function Base.propertynames(panel::FinishedPanel, private::Bool=false)
-    (:x, :y, :length, :width, :label, :cost, fieldnames(typeof(panel))...)
+    (:x, :y, :length, :width, :label, :cost, :thickness, :material,
+     fieldnames(typeof(panel))...)
 end
 
 

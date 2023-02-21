@@ -62,7 +62,7 @@ export cut
 
 let
     KERF = (1/8)u"inch"
-    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", money(20.00)))
+    panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 0.5u"inch", money(20.00)))
 
     # Cut panel1 at 25" down LengthAxis:
     panel2, panel3 = cut(panel1, LengthAxis(), 25u"inch"; kerf=KERF)
@@ -89,7 +89,7 @@ end
 
 let
     KERF = (1/8)u"inch"
-    panel1 = BoughtPanel(AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", money(95.00)))
+    panel1 = BoughtPanel(AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", 0.5u"inch", money(95.00)))
     at = 22u"inch"
     cut1, cut2 = cut(panel1, LengthAxis(), at, kerf=KERF)
     @assert cut1.length == at  "got $(cut1.length), expected $(at)"

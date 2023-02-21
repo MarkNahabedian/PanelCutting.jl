@@ -12,7 +12,9 @@ example_makers[WantedPanel] =
     () -> WantedPanel(;
                       label = "example WantedPanel",
                       width = 6u"inch",
-                      length = 10u"inch")
+                      length = 10u"inch",
+                      thickness = 0.5u"inch",
+                      material = "plywood")
 example_makers[FlippedPanel] =
     () -> FlippedPanel(example(WantedPanel))
 example_makers[AvailablePanel] =
@@ -20,6 +22,8 @@ example_makers[AvailablePanel] =
                          length = 4u"ft",
                          width = 2u"ft",
                          label = "example AvailablePanel",
+                         thickness = 0.5u"inch",
+                         material = "plywood",
                          cost = money(10.00))
 example_makers[BoughtPanel] =
     () -> BoughtPanel(example(AvailablePanel))
@@ -45,5 +49,7 @@ example_makers[FinishedPanel] =
         have = example(Panel)
         FinishedPanel(have, WantedPanel(label = "want",
                                         width = have.width,
-                                        length = have.length))
+                                        length = have.length,
+                                        thickness = have.thickness,
+                                        material = have.material))
     end

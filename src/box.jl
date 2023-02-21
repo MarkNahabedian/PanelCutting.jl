@@ -1,5 +1,5 @@
 
-# Describe abox to generate WantedPanels for it.
+# Describe a box to generate WantedPanels for it.
 
 export Face, Top, Bottom, Left, Right, Front, Back
 export opposite, neighbors
@@ -11,11 +11,12 @@ export Box, WantedPanels
 """
     Face
 
-Face is the abstract supertyype for the tokens that identify each face
+Face is the abstract supertype for the tokens that identify each face
 of a Box.
 
 Subtypes are Top, Bottom, Left, Right, Front and Back, which are all
-singleton types.  """
+singleton types.
+"""
 abstract type Face end
 
 map(eval,
@@ -58,7 +59,7 @@ neighbors(face1::Face, face2::Face)::Bool = face2 in neighbors(face1)
 """
     neighbors(face::Face)
 
-Return the `Face`s that are adacent to the specified `Face`.
+Return the `Face`s that are adjacent to the specified `Face`.
 """
 neighbors(face::Face) = Base.Iterators.Flatten(neighbor_pairs(face))
 
@@ -277,8 +278,8 @@ function WantedPanels(box::Box, face::Face)
         length, width = width, length
     end
     wp = WantedPanel(label = string(typeof(face)),
-                     # thickness = thickness,
-                     # material = material
+                     thickness = thickness,
+                     material = material,
                      length = length,
                      width = width)
     if grain_direction isa GDEither
