@@ -1,5 +1,0 @@
-[deps]
-Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-PanelCutting = "c1372bff-64f3-4c29-a5fb-167619e966f3"
-Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
-UnitfulUS = "7dc9378f-8956-57ef-a780-aa31cc70ff3d"

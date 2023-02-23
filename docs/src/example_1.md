@@ -83,7 +83,7 @@ BOULTER_PLYWOOD = Supplier(
     kerf = (1/8)u"inch",
     cost_per_cut = money(1.50),
     available_stock = [
-        AvailablePanel(
+        AvailablePanel(;
             label = "1/4 5 × 5 Baltic Birch",
             material = "Baltic Birch",
             thickness = (1/4)u"inch",
@@ -91,7 +91,7 @@ BOULTER_PLYWOOD = Supplier(
             width = 5u"ft",
             cost = 84.00   # I've not been able to get UnitfulCurrency to work
         ),
-        AvailablePanel(
+        AvailablePanel(;
             label = "1/4 30 × 60 Baltic Birch",
             material = "Baltic Birch",
             thickness = (1/4)u"inch",
@@ -99,7 +99,7 @@ BOULTER_PLYWOOD = Supplier(
             width = 30u"inch",
             cost = 51.00
         ),
-        AvailablePanel(
+        AvailablePanel(;
             label = "1/4 30 × 30 Baltic Birch",
             material = "Baltic Birch",
             thickness = (1/4)u"inch",
