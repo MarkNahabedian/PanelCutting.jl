@@ -50,6 +50,7 @@ AllOf
 STYLESHEET
 SVG_PANEL_MARGIN
 PanelCutting.callerFile
+compatible
 cut
 elt
 fitsin

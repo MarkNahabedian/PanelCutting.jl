@@ -19,9 +19,9 @@ example_makers[FlippedPanel] =
     () -> FlippedPanel(example(WantedPanel))
 example_makers[AvailablePanel] =
     () -> AvailablePanel(;
-                         length = 4u"ft",
-                         width = 2u"ft",
                          label = "example AvailablePanel",
+                         width = 2u"ft",
+                         length = 4u"ft",
                          thickness = 0.5u"inch",
                          material = "plywood",
                          cost = money(10.00))

@@ -114,6 +114,7 @@ function smaller(p1::AbstractPanel, p2::AbstractPanel)::Bool
 end
 
 export panelUID
+export compatible
 export AbstractPanel, AbstractWantedPanel, FlippedPanel, WantedPanel
 export AvailablePanel, CuttablePanel, BoughtPanel, Panel,  TerminalPanel
 export FinishedPanel, ScrappedPanel, Panels
@@ -124,6 +125,16 @@ export panel_xy, panel_lw
 
 panel_xy(p::CuttablePanel) = [p.x p.y]
 panel_lw(p::CuttablePanel) = [p.length p.width]
+
+
+"""
+    compatible(panel, panel2):Bool
+
+Return true if the panels have the same thickness and material.
+"""
+compatible(panel1, panel2) =
+    panel1.thickness == panel2.thickness &&
+    panel1.material == panel2.material
 
 
 """

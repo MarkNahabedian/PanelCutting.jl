@@ -63,7 +63,7 @@ function SearchState(precursor::SearchState, cost,
             # We just cut this panel, it's gone now.
             continue
         end
-        if any((w) -> fitsin(w, p), wanted)
+        if any((w) -> compatible(w, p) && fitsin(w, p), wanted)
 	    push!(working, p)
         else
             # p can't fit any remaining AbstractWantedPanel, scrap it:
@@ -97,16 +97,15 @@ end
 export SearchState, doneness
 
 
-md"""
-## Priority
+SearchPriority = Real
+
+"""
+    priority(::SearchState)::SearchPriority
 
 For A* Search we need to assign a priority to each state in the state
 space we are searching through.  A SearchState with **lower** priority
 will be considered **ahead** of one with higher priority.
 """
-
-SearchPriority = Real
-
 function priority(state::SearchState)::SearchPriority
     # Priority should get worse as the cost increases but should get better
     # as we approach completion.
@@ -116,14 +115,14 @@ end
 export SearchPriority, priority
 
 
-md"""
- ## Searching
+"""
+    Searcher
 
 This Searcher implements A* search using a PriorityQueue.
 
-One could implement other searchers to implement, for example, depth or breadth first search.
+One could implement other searchers to implement, for example, depth
+or breadth first search.
 """
-
 mutable struct Searcher
     supplier::Supplier
     wanted::Vector{<:AbstractWantedPanel}
@@ -183,7 +182,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
     # Try cutting the first wanted panel from each of the working panels
     function cutWanted(wanted)
         for working in state.working
-            if !fitsin(wanted, working)
+            if !(compatible(wanted, working) && fitsin(wanted, working))
                 continue
             end
             for axis_ in subtypes(Axis)
@@ -196,6 +195,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
                 end
                 @assert distance(cuts[1], axis) == distance(wanted, axis)
                 if distance(cuts[1], other(axis)) == distance(wanted, other(axis))
+                    # cuts[1] is exactly the right size for the AbstractWantedPanel.
 	            enqueue(searcher, SearchState(state, searcher.supplier.cost_per_cut,
 				                  FinishedPanel(cuts[1], wanted),
                                                   working,
@@ -203,6 +203,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
 		    successors += 1
 	            continue
                 end
+                # Otherwise cut cuts[1] on the other axis:
                 cuts2 = cut(cuts[1], other(axis), distance(wanted, other(axis));
                             kerf=searcher.supplier.kerf,
 			    cost=searcher.supplier.cost_per_cut)
@@ -223,17 +224,25 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
     cutWanted(wanted)
     # For FlippedPanel we consider both the flipped and original shapes:
     if wanted isa FlippedPanel
+        # BUT ISN'T THAT PANEL ALREADY IN WANTED?
         cutWanted(wanted.was)
     end
-    # If there are still WantedPanels remaininig but no progress was
+    # If there are still WantedPanels remaining but no progress was
     # made, buy more stock.
     if successors == 0 && !isempty(state.wanted)
         for p in searcher.supplier.available_stock
+            if !compatible(p, state.wanted[1])
+                continue
+            end
             if fitsin(state.wanted[1], p)
                 new_state = SearchState(state, p.cost, nothing,
                                         nothing, BoughtPanel(p))
+                successors += 1
 	        enqueue(searcher, new_state)
             end
+        end
+        if successors == 0
+            error("No AvailablePanels for $(state.wanted[1]) from $(searcher.supplier).")
         end
     end
 end

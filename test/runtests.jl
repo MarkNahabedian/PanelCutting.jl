@@ -172,7 +172,8 @@ end
     wanted = 3 * WantedPanel(label="panel",
                              length=1u"ft",
                              width=20u"inch",
-                             thickness = 0.5u"inch")
+                             material="plywood",
+                             thickness=0.5u"inch")
     searcher = Searcher(supplier, wanted)
     search(searcher)
     @test length(wanted) == length(searcher.cheapest.finished)
@@ -194,6 +195,7 @@ end
     wanted = 3 * WantedPanel(label="panel",
                              length=1.5u"ft",
                              width=20u"inch",
+                             material="plywood",
                              thickness = 0.5u"inch")
     searcher = Searcher(supplier, wanted)
     search(searcher)
@@ -223,16 +225,19 @@ end
 	    label="bottom",
 	    length=box_length,
 	    width=box_width,
+            material="plywood",
             thickness = stock_thickness),
         (2 * WantedPanel(
 	    label="side",
 	    length=box_length,
 	    width=box_height - stock_thickness + rabbet_depth,
+            material="plywood",
             thickness = stock_thickness))...,
         ((compartment_count + 1) *
 	    WantedPanel(label="divider",
 		        width=(box_height - stock_thickness + rabbet_depth),
 		        length=(box_width - 2 * stock_thickness + 2 * rabbet_depth),
+                        material="plywood",
                         thickness = stock_thickness)...)
     ]
     supplier = Supplier(
@@ -245,10 +250,12 @@ end
 		length=24u"inch",
 		width=4u"inch",
                 thickness = stock_thickness,
+                material="plywood",
 		cost=4)
 	])
     searcher = Searcher(supplier, wanted_panels)
     search(searcher)
+    @test searcher.cheapest isa SearchState
     @test isempty(unused_bought_panels(searcher.cheapest))
     make_test_graphs(searcher.cheapest, "too-many-buys")
     bought = Set(map(progenitor, searcher.cheapest.finished))
