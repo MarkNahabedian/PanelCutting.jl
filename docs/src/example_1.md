@@ -38,18 +38,24 @@ WANTED = [
         # the bottom will occupy the full footprint of the box with
         # the sides and ends sitting on top of it
         length = box_length,
-        width = box_width),
+        width = box_width,
+        material = "Baltic Birch",
+        thickness = (1/4)u"inch"),
     # Sometimes we need several instances of the same shaped panel.
     # WantedPanel can take a pre-multiplier:
     (2 * WantedPanel(
         label = "side",
         length = box_length - 2 * stock_thickness,
-        width = box_depth - stock_thickness)
+        width = box_depth - stock_thickness,
+        material = "Baltic Birch",
+        thickness = (1/4)u"inch")
      )...,  # Pre-multiplying gives a Vector, which we must spread.
     (2 * WantedPanel(
         label = "end",
         length = box_width - 2 * stock_thickness,
-        width = box_depth - stock_thickness)
+        width = box_depth - stock_thickness,
+        material = "Baltic Birch",
+        thickness = (1/4)u"inch")
      )...
          ]
 ```
@@ -61,7 +67,9 @@ version of a `WantedPanel`:
 orFlipped(WantedPanel(
     label = "bottom",
     length = box_length,
-    width = box_width))
+    width = box_width,
+    material = "Baltic Birch",
+    thickness = (1/4)u"inch",))
 ```
 
 but we will not include these in our example.
