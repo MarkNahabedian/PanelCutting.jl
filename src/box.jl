@@ -20,6 +20,14 @@ singleton types.
 """
 abstract type Face end
 
+
+"""
+    opposite(::Face)::Face
+
+Return the `Face` that is opposite to the specified face.
+"""
+function opposite end
+
 map(eval,
     let
         structs = []
@@ -75,6 +83,11 @@ Return the `Face`s that are adjacent to the specified `Face`.
 neighbors(face::Face) = Base.Iterators.Flatten(neighbor_pairs(face))
 
 
+"""
+    Edge(::Face, ::Face)
+
+The edge of the box that connects the two specified faces.
+"""
 struct Edge
     face1::Face
     face2::Face
@@ -108,8 +121,8 @@ abstract type GrainDirection end
 """
     GDLong
 
-GDLong indicates that the grain direction for a specified Face runs in
-the long direction of the resulting Panel.
+Use `GDLong()` to indicate that the grain of the face should run
+parallel to its longer edges.
 """
 struct GDLong <: GrainDirection end
 
@@ -117,8 +130,8 @@ struct GDLong <: GrainDirection end
 """
     GDShort
 
-GDShort indicates that the grain direction for a specified Face runs in
-the short direction of the resulting Panel.
+Use `GDShort()` to indicate that the grain of the face should run
+parallel to its shorter edges.
 """
 struct GDShort <: GrainDirection end
 
@@ -126,8 +139,8 @@ struct GDShort <: GrainDirection end
 """
     GDEither
 
- indicates that the grain direction for a specified Face runs in
-the short direction of the resulting Panel.
+Use `GDEither()` if you don't care whether the grain runs parallel to the
+long or short edges of the panel.
 """
 struct GDEither <: GrainDirection end
 
@@ -213,7 +226,7 @@ Box(length::LengthType, width::LengthType, height::LengthType) =
 """
     do_faces(::Function, ::Box)
 
-Apply the function to each face of the Box trhat is not open/missing.
+Apply the function to each face of the Box that is not open/missing.
 """
 function do_faces(f::Function, box::Box)
     for ft in subtypes(Face)
@@ -229,12 +242,12 @@ end
 
 Return the outside dimension of the box between the two faces.
 """
-dimension(box::Box, ::Left, ::Right) = box.width
-dimension(box::Box, ::Right, ::Left) = box.width
-dimension(box::Box, ::Top, ::Bottom) = box.height
-dimension(box::Box, ::Bottom, ::Top) = box.height
-dimension(box::Box, ::Front, ::Back) = box.length
-dimension(box::Box, ::Back, ::Front) = box.length
+distance(box::Box, ::Left, ::Right) = box.width
+distance(box::Box, ::Right, ::Left) = box.width
+distance(box::Box, ::Top, ::Bottom) = box.height
+distance(box::Box, ::Bottom, ::Top) = box.height
+distance(box::Box, ::Front, ::Back) = box.length
+distance(box::Box, ::Back, ::Front) = box.length
 
 
 """
@@ -288,7 +301,7 @@ function WantedPanels(box::Box, face::Face)
     grain_direction = box.grain_direction[face]
     dimensions = []
     for np in neighbor_pairs(face)
-        d = dimension(box, np...)
+        d = distance(box, np...)
         for n in np
             if !box.open[n]
                 d += length_adjust(box, face, n)
@@ -313,6 +326,12 @@ function WantedPanels(box::Box, face::Face)
     return [wp]
 end
 
+
+"""
+    WantedPanels(::Box)
+
+Return the collection of `WantedPanel`s to make the `Box`.
+"""
 function WantedPanels(box::Box)
     wanted = []
     do_faces(box) do face

@@ -20,6 +20,7 @@ makedocs(;
     pages=[
         "Home" => "index.md"
         "Example 1" => "example_1.md"
+        "Boxes" => "box_example.md"
     ]
 )
 

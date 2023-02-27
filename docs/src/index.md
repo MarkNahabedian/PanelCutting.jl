@@ -47,6 +47,7 @@ x) and width (along y) to simplify SVG generation.
 
 ```@docs
 AllOf
+area
 STYLESHEET
 SVG_PANEL_MARGIN
 PanelCutting.callerFile
@@ -59,11 +60,13 @@ major
 minor
 orFlipped
 other
+panelUID
 panelrect
 replace0
 report
 PanelCutting.runCmd
 smaller
+Searcher
 svgdistance
 ```
 
