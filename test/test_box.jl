@@ -70,9 +70,7 @@ end
 end
 
 @testset "Box Face length_adjust" begin
-    box = Box(; width = 3u"m",
-              height = 1u"m",
-              depth = 2u"m")
+    box = Box(3u"m", 2u"m", 1u"m")
     for f in subtypes(Face)
         box.thickness[f()] = 5u"mm"
     end
@@ -87,9 +85,7 @@ end
 end
 
 @testset "Box" begin
-    box = Box(; width = 3u"m",
-              height = 1u"m",
-              depth = 2u"m")
+    box = Box(3u"m", 2u"m", 1u"m")
     box.open[Top()] = true
     box.grain_direction[Bottom()] = GDEither()
     for f in subtypes(Face)
@@ -138,7 +134,7 @@ end
         @info left
         @test left.length > left.width
         dj = box.joint_types[Edge(Front(), Left())]
-        @test float(left.length) == float(box.depth + dj.tongue_length - box.thickness[Front()])
+        @test float(left.length) == float(box.length + dj.tongue_length - box.thickness[Front()])
         @test float(left.width) == float(box.height - box.thickness[Bottom()])
     end
     let
@@ -149,7 +145,7 @@ end
         @info right
         @test right.length > right.width
         dj = box.joint_types[Edge(Front(), Right())]
-        @test float(right.length) == float(box.depth + dj.tongue_length - box.thickness[Front()])
+        @test float(right.length) == float(box.length + dj.tongue_length - box.thickness[Front()])
         @test float(right.width) == float(box.height - box.thickness[Bottom()])
     end
     let
@@ -159,8 +155,8 @@ end
         bottom = bottom[1]
         @info bottom
         @test bottom.length > bottom.width
-        @test bottom.length == box.width
-        @test bottom.width == box.depth
+        @test bottom.length == box.length
+        @test bottom.width == box.width
     end
     let
         @info "Bottom, FlippedPanel"
@@ -169,7 +165,7 @@ end
         bottom = bottom[1]
         @info bottom
         @test bottom.length < bottom.width
-        @test bottom.length == box.depth
-        @test bottom.width == box.width
+        @test bottom.length == box.width
+        @test bottom.width == box.length
     end
 end

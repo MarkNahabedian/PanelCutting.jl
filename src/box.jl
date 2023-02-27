@@ -2,6 +2,7 @@
 # Describe a box to generate WantedPanels for it.
 
 export Face, Top, Bottom, Left, Right, Front, Back
+export do_faces
 export opposite, neighbors
 export Edge
 export GrainDirection, GDLong, GDShort, GDEither
@@ -144,9 +145,9 @@ struct FingerJoint <: JointType end
 
 
 """
-    ButtJoint
+    ButtJoint(shortened)
 
-If the joint type specified for a pair of Faces is ButtJoint then the
+If the joint type specified for a pair of Faces is a ButtJoint, then the
 face specified by `shortened` is shortened by the thickness of the
 other face.
 """
@@ -156,9 +157,9 @@ end
 
 
 """
-    DadoJoint
+    DadoJoint(tongued::Face, tongue_length::LengthType)
 
-If the jooint type specified for a pair of faces is DadoJoint, then
+If the joint type specified for a pair of faces is a DadoJoint, then
 the face specified by `tongued` is shortened by the thickness of the
 other face and then lengthened by `tongue_length`.
 """
@@ -168,11 +169,16 @@ struct DadoJoint <: JointType
 end
 
 
+"""
+    Box(length::LengthType, width::LengthType, height::LengthType)
+
+Define a box of the spcified dimensions.
+"""
 @Base.kwdef struct Box
     # Outside dimensions:
+    length::LengthType              # Front to Back
     width::LengthType               # Left to Right
     height::LengthType              # Top to Bottom
-    depth::LengthType               # Front to Back
 
     # Fanel thickness for each Face:
     thickness = DefaultDict((1/4)u"inch")
@@ -190,6 +196,10 @@ end
     joint_types = DefaultDict(FingerJoint())
 end
 
+Box(length::LengthType, width::LengthType, height::LengthType) =
+    Box(; length = length, width = width, height = height)
+
+
 """
     do_faces(::Function, ::Box)
 
@@ -204,12 +214,17 @@ function do_faces(f::Function, box::Box)
     end
 end
 
+"""
+    distance(::Box, ::Face, ::Face)
+
+Return the outside dimension of the box between the two faces.
+"""
 dimension(box::Box, ::Left, ::Right) = box.width
 dimension(box::Box, ::Right, ::Left) = box.width
 dimension(box::Box, ::Top, ::Bottom) = box.height
 dimension(box::Box, ::Bottom, ::Top) = box.height
-dimension(box::Box, ::Front, ::Back) = box.depth
-dimension(box::Box, ::Back, ::Front) = box.depth
+dimension(box::Box, ::Front, ::Back) = box.length
+dimension(box::Box, ::Back, ::Front) = box.length
 
 
 """
