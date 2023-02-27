@@ -37,7 +37,17 @@ map(eval,
             others = make(collect(setdiff(pairs, Set([p]))))
             for t in p
                 push!(structs,
-                      :(struct $t <: Face end))
+                      :(struct $t <: Face end),
+                      Expr(:call, Base.Docs.doc!, @__MODULE__,
+                           Expr(:call, Base.Docs.Binding, @__MODULE__,
+                                QuoteNode(t)),
+                           Expr(:call, Base.Docs.docstr,
+                                "The **" * lowercase(string(t)) *
+                                    "** face of a `Box`.",
+                                Dict{Symbol, Any}(
+                                    :path => @__FILE__,
+                                    :linenumber => @__LINE__,
+                                    :module => @__MODULE__))))
                 push!(np,
                       :(neighbor_pairs(::$t) = $others))
             end
