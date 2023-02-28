@@ -17,7 +17,7 @@ struct PanelCutGraph
     end
 
     PanelCutGraph(state::SearchState) =
-        PanelCutGraph(state, makePanelGraph(state))
+        PanelCutGraph(state, PanelGraph(state))
 end
 
 # Delegate to the underlying graphs

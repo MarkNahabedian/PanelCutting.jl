@@ -150,7 +150,7 @@ export SVG_PANEL_MARGIN, toSVG
 
 
 function toSVG(state::SearchState)::XML.Element
-    rpg = makePanelGraph(state)
+    rpg = PanelGraph(state)
     #=
     write(io, """<?xml version="1.0" encoding="UTF-8"?>\n""")
     write(io, """<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n""")

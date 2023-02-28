@@ -150,7 +150,7 @@ function unuesd_bought_panels(state::SearchState)
 end
 
 function make_test_graphs(state::SearchState, basename::String)
-    pg = makePanelGraph(state)
+    pg = PanelGraph(state)
     function make_graph(g, fname)
         dotgraph(fname, g, PanelsDotStyle())
         # dot isn't installed in the GitHub test environment:

@@ -112,7 +112,7 @@ begin
 	# This graph just shows panels by their types and uids and
 	# the relationships between them,
 	function PanelCutting.dotgraph(io::IO, state::SearchState)::Nothing
-		rpg = makePanelGraph(state)
+		rpg = PanelGraph(state)
 		dotgraph(io, rpg)
 		return
 	end

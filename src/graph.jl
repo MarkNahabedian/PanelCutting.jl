@@ -1,12 +1,5 @@
-md"""
-# Panel Graph
 
-AbstractPanels are related to one another through a directed graph
-based on various relations.  Here we construct the inverse directed graph,
-which could be one-to-many.
-"""
-
-export PanelGraph, injest, makePanelGraph
+export PanelGraph, injest
 export nodes, edges, query
 
 struct PanelGraph
@@ -62,7 +55,15 @@ function injest(pg::PanelGraph, panel::Panel)
     injest(pg, panel.cut_from)
 end
 
-function makePanelGraph(state::SearchState)::PanelGraph
+
+"""
+    PanelGraph(::SearchState)::PanelGraph
+
+AbstractPanels are related to one another through a directed graph
+based on various relations.  PanelGraph represents the reverse
+directed graph from that represented in the panels themselves.
+"""
+function PanelGraph(state::SearchState)::PanelGraph
     pg = PanelGraph()
     function inj(panels)
         for p in panels
