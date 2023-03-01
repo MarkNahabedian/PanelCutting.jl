@@ -1,10 +1,8 @@
 
+# Describing the Cuts using SVG
+
 export STYLESHEET, svgdistance, elt, panelrect
 
-
-md"""
-# Describing the Cuts using SVG
-"""
 
 """
 The CSS stylesheet we use for SVG rendering in reports.
@@ -20,17 +18,22 @@ const STYLESHEET = """
     stroke: rgb(0%,50%, 50%);
     stroke-dasharray: 4 4;
   }
-  .factory-edge {
+  .BoughtPanel-edge rect {
     stroke-width: 1px;
     stroke: blue;
     fill: none;
   }
-  .finished {
+  .FinishedPanel rect {
     stroke: none;
     fill: rgb(0%, 50%, 0%);
   }
-  text.finished {
-    color: white;
+  .ScrappedPanel rect {
+    stroke: none;
+    fill: rgb(50%, 0%, 0%);
+  }
+  .FinishedPanel text {
+    stroke: white;
+    fill: white;
     text-anchor: middle;
     font-family: sans-serif;
     font-size: 2px;
@@ -99,45 +102,28 @@ elt(tagname::AbstractString, things...) = elt(identity, tagname, things...)
 
 
 """
-    panelrect(panel::AbstractPanel, cssclass::String)
+    panelrect(panel::AbstractPanel)
 
-Return an SVG element that will draw a rectangle representing the panel.
+Return an SVG element that will draw the representation of the panel.
 """
-function panelrect(panel::AbstractPanel, cssclass::String)
+function panelrect(panel::AbstractPanel)
     # It's confusing that panel.width corresponds to SVG length
     # and panel.length corresponds to SVG width.  Sorry.
     # This is a consequence of the x and y coordinates of a panel
     # corresponding with the panel's length and width respectively.
-    elt("g") do a
+    elt("g", :class => string(typeof(panel))) do a
         a(xmlComment(string("<!-- $(panel.label): ",
 			    "$(panel.width) by $(panel.length), ",
 			    "at $(panel.x), $(panel.y) -->\n")))
-        a(elt("rect") do a
-              a.([:class =>cssclass,
-	          :x => svgdistance(panel.x),
-	          :y => svgdistance(panel.y),
-	          :width => svgdistance(panel.length),
-	          :height => svgdistance(panel.width)])
-              if panel isa FinishedPanel
-                  elt("title") do a
-                      a("$(panel.length) × $(panel.width)")
-                  end
-	      end
-          end)
-	if panel isa FinishedPanel
-            a(elt("text") do a
-                  a.([
-                      :class => cssclass,
-	              :x => svgdistance(panel.x + panel.length / 2),
-	              :y => svgdistance(panel.y + panel.width / 2),
-                      "$(panel.length) × $(panel.width)"
-                  ])
-              end)
-	end
+        a(elt("rect",
+	      :x => svgdistance(panel.x),
+	      :y => svgdistance(panel.y),
+	      :width => svgdistance(panel.length),
+	      :height => svgdistance(panel.width),
+              panel_title_elt(panel)))
+        a(panel_text_elt(panel))
     end
 end
-
-export panelrect
 
 
 """
@@ -199,9 +185,8 @@ function toSVG(panel::BoughtPanel, rpg::PanelGraph)
 	transform = "rotate(90) translate($tx $ty)"
     end
     elt("g",
-        :class => "BoughtPanel",
         :transform =>transform) do a
-            a(panelrect(panel, "factory-edge"))
+            a(panelrect(panel))
 	    for p in rpg[panel]
 	        a(toSVG(p, rpg))
 	    end
@@ -229,7 +214,33 @@ function toSVG(panel::Panel, rpg::PanelGraph)
 end
 
 function toSVG(panel::FinishedPanel, rpg::PanelGraph)
-    elt("g", :class => "FinishedPanel",
-        panelrect(panel, "finished"))
+    panelrect(panel)
+end
+
+function toSVG(panel::ScrappedPanel, rpg::PanelGraph)
+    panelrect(panel)
+end
+
+panel_text_elt(::AbstractPanel) = nothing
+
+panel_title_elt(panel::BoughtPanel) = nothing
+
+function panel_title_elt(panel::FinishedPanel)
+    elt("title",
+        "$(panel.length) × $(panel.width)")
+end
+
+function panel_title_elt(panel::ScrappedPanel)
+    elt("title",
+        "SCRAP\n$(panel.length) × $(panel.width)")
+end
+
+function panel_text_elt(panel::FinishedPanel)
+    elt("text",
+	:x => svgdistance(panel.x + panel.length / 2),
+	:y => svgdistance(panel.y + panel.width / 2),
+        :textLength => svgdistance(panel.length),
+        :lengthAdjust => "spacingAndGlyphs",
+        "$(panel.length) × $(panel.width)")
 end
 
