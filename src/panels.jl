@@ -231,24 +231,6 @@ function Base.:*(how_many::Integer, p::WantedPanel)::Vector{WantedPanel}
     end
 end
 
-
-# Testing
-let
-    w = WantedPanel(width=1u"inch", length=2u"inch", label="foo", thickness= 0.5u"inch")
-    f = flipped(w)
-    @assert w.length == f.width
-    @assert w.width == f.length
-    @assert setdiff(Set(propertynames(f)), Set(propertynames(w))) == Set((:was,))
-    @assert wantsmatch(w, w)
-    @assert wantsmatch(f, f)
-    @assert wantsmatch(w, f)
-    @assert wantsmatch(f, w)
-    @assert flipped(WantedPanel(width=10u"inch",
-				length=10u"inch",
-                                thickness= 0.5u"inch",
-				label="square")) isa WantedPanel
-end
-
 function uniqueWantedPanels(panels)::Vector{AbstractWantedPanel}
     result = Vector{AbstractWantedPanel}()
     have = []
@@ -340,18 +322,6 @@ end
 function Base.propertynames(panel::BoughtPanel, private::Bool=false)
     (:x, :y, :length, :width, :label, :cost, :thickness, :material,
      fieldnames(typeof(panel))...)
-end
-
-# Though two BoughtPanels might be derived from the same
-# AvailablePanel, we need to be able to distinguish between them
-# because making a cut in one of them does not alter tje other.
-let
-    ap = AvailablePanel(; label = "4 x 8 x 1/2",
-                        width = 4u"ft",
-                        length = 8u"ft",
-                        thickness = 0.5u"inch",
-                        cost = money(95.00))
-    @assert BoughtPanel(ap) != BoughtPanel(ap)
 end
 
 

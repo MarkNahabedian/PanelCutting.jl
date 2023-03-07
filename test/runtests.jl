@@ -29,6 +29,15 @@ include("example_makers.jl")
 
 include("test_overlap.jl")
 
+@testset "Axes" begin
+    @test LengthAxis() isa Axis
+    @test WidthAxis() isa Axis
+    @test other(WidthAxis()) == LengthAxis()
+    @test other(LengthAxis()) == WidthAxis()
+
+    @test area([2 3]) == 6
+end
+
 @testset "cut math" begin
     at = 8u"inch"
     plw = [2u"ft" 1u"ft"]
@@ -46,6 +55,18 @@ end
     end
 end
 
+@testset "BoughtPanel uniqueness" begin
+    # Though two BoughtPanels might be derived from the same
+    # AvailablePanel, we need to be able to distinguish between them
+    # because making a cut in one of them does not alter tje other.
+    ap = AvailablePanel(; label = "4 x 8 x 1/2",
+                        width = 4u"ft",
+                        length = 8u"ft",
+                        thickness = 0.5u"inch",
+                        cost = money(95.00))
+    @test BoughtPanel(ap) != BoughtPanel(ap)
+end
+
 @testset "PanelIntegrity" begin
     # Make sure we can't associate the wrong kinds or sizes of panels
     # with one another
@@ -56,6 +77,45 @@ end
     panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 0.5u"inch", 20))
     panels = cut(panel1, axis, panel1.length * 1.1)
     @test isempty(panels)
+end
+
+@testset "Cutting" begin
+    let
+        KERF = (1/8)u"inch"
+        panel1 = BoughtPanel(AvailablePanel("30 by 60", 30u"inch", 60u"inch", 0.5u"inch", money(20.00)))
+
+        # Cut panel1 at 25" down LengthAxis:
+        panel2, panel3 = cut(panel1, LengthAxis(), 25u"inch"; kerf=KERF)
+        @test panel2.length == 25u"inch"
+        @test panel2.width == 30u"inch"
+        @test panel3.length == panel1.length - panel2.length - KERF
+        @test panel3.width == 30u"inch"
+        @test panel2.x == panel1.x
+        @test panel2.y == panel1.y
+        @test panel3.x == panel1.x + panel2.length + KERF
+        @test panel3.y == panel1.y
+        
+        # Cut panel2 at 10" down WidthAxis:
+        panel4, panel5 = cut(panel2, WidthAxis(), 10u"inch", kerf=KERF)
+        @test panel4.width == 10u"inch"
+        @test panel4.length == panel2.length
+        @test panel4.x == panel2.x
+        @test panel4.y == panel2.y
+        @test panel5.x == panel2.x
+        @test panel5.y == panel4.y + panel4.width + KERF
+        @test panel5.length == panel2.length
+        @test panel5.width == panel2.width - panel4.width - KERF
+    end
+    let
+        KERF = (1/8)u"inch"
+        panel1 = BoughtPanel(AvailablePanel("4 x 8 x 1/2", 4u"ft", 8u"ft", 0.5u"inch", money(95.00)))
+        at = 22u"inch"
+        cut1, cut2 = cut(panel1, LengthAxis(), at, kerf=KERF)
+        @test cut1.length == at
+        @test cut1.width == panel1.width
+        @test cut2.width == panel1.width
+        @test cut2.length ≈ panel1.length - at - KERF
+    end
 end
 
 # A bunch of common test assertions relating a Panel to the
@@ -260,6 +320,23 @@ end
     make_test_graphs(searcher.cheapest, "too-many-buys")
     bought = Set(map(progenitor, searcher.cheapest.finished))
     @test length(bought) == 2
+end
+
+@testset "FlippedPanel" begin
+    w = WantedPanel(width=1u"inch", length=2u"inch", label="foo", thickness= 0.5u"inch")
+    f = flipped(w)
+    @test w.length == f.width
+    @test w.width == f.length
+    @test setdiff(Set(propertynames(f)), Set(propertynames(w))) == Set((:was,))
+    @test wantsmatch(w, w)
+    @test wantsmatch(f, f)
+    @test wantsmatch(w, f)
+    @test wantsmatch(f, w)
+    @test flipped(WantedPanel(width=10u"inch",
+			      length=10u"inch",
+                              thickness= 0.5u"inch",
+			      label="square")
+                  ) isa WantedPanel
 end
 
 @testset "OrFlipped" begin

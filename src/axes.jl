@@ -29,11 +29,6 @@ function other(axis::WidthAxis)::Axis
     LengthAxis()
 end
 
-@assert LengthAxis() isa Axis
-@assert WidthAxis() isa Axis
-@assert other(WidthAxis()) == LengthAxis()
-@assert other(LengthAxis()) == WidthAxis()
-
 pretty(axis::Axis) = typeof(axis)
 
 unit_vector(::LengthAxis) = [1 0]
@@ -42,8 +37,6 @@ unit_vector(::WidthAxis) = [0 1]
 const zerovector = [0u"inch" 0u"inch"]
 
 area(v::Array{<:Number, 2}) = v[1] * v[2]
-
-@assert area([2 3]) == 6
 
 const zeroarea = area(zerovector)
 
