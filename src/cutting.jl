@@ -3,6 +3,18 @@ md"""
 # Cutting
 """
 
+
+"""
+    CostDistribution
+
+CostDistribution is the abstract supertype for the various choices we
+implement for sharing the cost of a precursor panel and its cut with
+its descendent panels.
+"""
+abstract type CostDistribution end
+
+
+
 """
     cut(panel, axis, at; kerf, cost)::(panel1, panel2)
 
@@ -26,6 +38,8 @@ function cut(panel::CuttablePanel,
     # It does affect the cost though:
     cost = panel.cost + (distance(panel, axis) > at ? cost : 0)
     mult(v1, v2) = map(*, v1, v2)
+    # the cut is made in the direction of cross_vector, at_vector away
+    # from the edge of the panel.  The cut is kerf_vector wide.
     at_vector = at * unit_vector(axis)
     kerf_vector = kerf * unit_vector(axis)
     cross_vector = mult(panel_lw(panel), unit_vector(other(axis)))
