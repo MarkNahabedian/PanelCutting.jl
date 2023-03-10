@@ -195,6 +195,9 @@ end
 
 function toSVG(panel::Panel, rpg::PanelGraph)
     elt("g", :class => "Panel") do a
+        a(xmlComment(string("<!-- $(panel.label): ",
+			    "$(panel.width) by $(panel.length), ",
+			    "at $(panel.x), $(panel.y) -->\n")))
 	for p in rpg[panel]
 	    a(toSVG(p, rpg))
 	end
