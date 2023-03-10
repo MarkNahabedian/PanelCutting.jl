@@ -59,7 +59,7 @@ wanted = [
 
 md"""
 We must also describe what sheet stock is available to cut from.  We
-do this with `AvasilablePanel`.  Each size of `AvailablePanel` only
+do this with `AvailablePanel`.  Each size of `AvailablePanel` only
 needs to be instantiated once.  It is assumed that the supply of
 `AvailablePanel`s is unlimited for our purposes.  These sizes and
 prices are taken from my local plywood supplier.  My supplier will
