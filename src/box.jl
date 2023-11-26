@@ -292,7 +292,7 @@ end
 # Maybe we define a Faces naighbors as tow two element tuples.
 
 
-function WantedPanels(box::Box, face::Face)
+function WantedPanels(box::Box, face::Face)::Vector{WantedPanel}
     if box.open[face]
         return []
     end
@@ -323,7 +323,7 @@ function WantedPanels(box::Box, face::Face)
     if grain_direction isa GDEither
         return orFlipped(wp)
     end
-    return [wp]
+    return push!(Vector{WantedPanel}(), wp)
 end
 
 
@@ -332,8 +332,8 @@ end
 
 Return the collection of `WantedPanel`s to make the `Box`.
 """
-function WantedPanels(box::Box)
-    wanted = []
+function WantedPanels(box::Box)::Vector{WantedPanel}
+    wanted = Vector{WantedPanel}()
     do_faces(box) do face
         push!(wanted, WantedPanels(box, face)...)
     end
