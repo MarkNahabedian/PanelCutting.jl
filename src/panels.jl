@@ -61,11 +61,11 @@ function minor(p::AbstractPanel)
 end
 
 function distance(panel::AbstractPanel, axis::WidthAxis)
-    panel.width
+    float(panel.width)
 end
 
 function distance(panel::AbstractPanel, axis::LengthAxis)
-    panel.length
+    float(panel.length)
 end
 
 	

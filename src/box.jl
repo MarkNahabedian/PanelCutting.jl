@@ -242,12 +242,12 @@ end
 
 Return the outside dimension of the box between the two faces.
 """
-distance(box::Box, ::Left, ::Right) = box.width
-distance(box::Box, ::Right, ::Left) = box.width
-distance(box::Box, ::Top, ::Bottom) = box.height
-distance(box::Box, ::Bottom, ::Top) = box.height
-distance(box::Box, ::Front, ::Back) = box.length
-distance(box::Box, ::Back, ::Front) = box.length
+distance(box::Box, ::Left, ::Right) = float(box.width)
+distance(box::Box, ::Right, ::Left) = float(box.width)
+distance(box::Box, ::Top, ::Bottom) = float(box.height)
+distance(box::Box, ::Bottom, ::Top) = float(box.height)
+distance(box::Box, ::Front, ::Back) = float(box.length)
+distance(box::Box, ::Back, ::Front) = float(box.length)
 
 
 """
@@ -292,7 +292,7 @@ end
 # Maybe we define a Faces naighbors as tow two element tuples.
 
 
-function WantedPanels(box::Box, face::Face)::Vector{WantedPanel}
+function WantedPanels(box::Box, face::Face)::Vector{AbstractWantedPanel}
     if box.open[face]
         return []
     end
@@ -323,7 +323,7 @@ function WantedPanels(box::Box, face::Face)::Vector{WantedPanel}
     if grain_direction isa GDEither
         return orFlipped(wp)
     end
-    return push!(Vector{WantedPanel}(), wp)
+    return push!(Vector{AbstractWantedPanel}(), wp)
 end
 
 
@@ -332,8 +332,8 @@ end
 
 Return the collection of `WantedPanel`s to make the `Box`.
 """
-function WantedPanels(box::Box)::Vector{WantedPanel}
-    wanted = Vector{WantedPanel}()
+function WantedPanels(box::Box)::Vector{AbstractWantedPanel}
+    wanted = Vector{AbstractWantedPanel}()
     do_faces(box) do face
         push!(wanted, WantedPanels(box, face)...)
     end

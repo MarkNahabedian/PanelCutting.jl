@@ -193,7 +193,9 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
                 if length(cuts) == 0
 	            continue
                 end
-                @assert distance(cuts[1], axis) == distance(wanted, axis)
+                # Make sure cuts gave us the right length along axis:
+                @assert(distance(cuts[1], axis) == distance(wanted, axis),
+                        "$(cuts[1]) $axis doesn't match $(distance(wanted, axis))")
                 if distance(cuts[1], other(axis)) == distance(wanted, other(axis))
                     # cuts[1] is exactly the right size for the AbstractWantedPanel.
 	            enqueue(searcher, SearchState(state, searcher.supplier.cost_per_cut,
@@ -222,12 +224,7 @@ function progress(searcher::Searcher, state::SearchState)::Nothing
     end
     wanted = state.wanted[1]
     cutWanted(wanted)
-    # For FlippedPanel we consider both the flipped and original shapes:
-    if wanted isa FlippedPanel
-        # BUT ISN'T THAT PANEL ALREADY IN WANTED?
-        cutWanted(wanted.was)
-    end
-    # If there are still WantedPanels remaining but no progress was
+    # If there are still panels remaining in wanted but no progress was
     # made, buy more stock.
     if successors == 0 && !isempty(state.wanted)
         for p in searcher.supplier.available_stock
