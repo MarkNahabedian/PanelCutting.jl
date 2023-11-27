@@ -77,11 +77,11 @@ end
     la = PanelCutting.length_adjust
     box.joint_types[Edge(Front(), Right())] = ButtJoint(Right())
     box.joint_types[Edge(Front(), Bottom())] = DadoJoint(Bottom(), 2u"mm")
-    @test la(box, Back(), Left()) == 0u"mm"
-    @test la(box, Front(), Right()) == 0u"mm"
-    @test la(box, Right(), Front()) == -5u"mm"
-    @test la(box, Front(), Bottom()) == 0u"mm"
-    @test la(box, Bottom(), Front()) == -3u"mm"
+    @test isapprox(la(box, Back(), Left()), 0u"mm")
+    @test isapprox(la(box, Front(), Right()), 0u"mm")
+    @test isapprox(la(box, Right(), Front()), -5u"mm")
+    @test isapprox(la(box, Front(), Bottom()), 0u"mm")
+    @test isapprox(la(box, Bottom(), Front()), -3u"mm")
 end
 
 @testset "Box" begin
@@ -113,8 +113,9 @@ end
         back = back[1]
         @info back
         @test back.length > back.width
-        @test back.length == box.width
-        @test back.width == box.height - box.thickness[Bottom()]
+        @test isapprox(back.length, box.width)
+        @test isapprox(back.width,
+                       box.height - box.thickness[Bottom()])
     end
     let
         @info "Front"
@@ -123,8 +124,9 @@ end
         front = front[1]
         @info front
         @test front.length > front.width
-        @test front.length == box.width
-        @test front.width == box.height - box.thickness[Bottom()]
+        @test isapprox(front.length, box.width)
+        @test isapprox(front.width,
+                       box.height - box.thickness[Bottom()])
     end
     let
         @info "Left"
@@ -134,8 +136,11 @@ end
         @info left
         @test left.length > left.width
         dj = box.joint_types[Edge(Front(), Left())]
-        @test float(left.length) == float(box.length + dj.tongue_length - box.thickness[Front()])
-        @test float(left.width) == float(box.height - box.thickness[Bottom()])
+        @test isapprox(left.length,
+                       box.length + dj.tongue_length
+                             - box.thickness[Front()])
+        @test isapprox(left.width,
+                       box.height - box.thickness[Bottom()])
     end
     let
         @info "Right"
@@ -145,8 +150,10 @@ end
         @info right
         @test right.length > right.width
         dj = box.joint_types[Edge(Front(), Right())]
-        @test float(right.length) == float(box.length + dj.tongue_length - box.thickness[Front()])
-        @test float(right.width) == float(box.height - box.thickness[Bottom()])
+        @test isapprox(right.length,
+                       box.length + dj.tongue_length - box.thickness[Front()])
+        @test isapprox(right.width,
+                       box.height - box.thickness[Bottom()])
     end
     let
         @info "Bottom, WantedPanel"
@@ -155,8 +162,8 @@ end
         bottom = bottom[1]
         @info bottom
         @test bottom.length > bottom.width
-        @test bottom.length == box.length
-        @test bottom.width == box.width
+        @test isapprox(bottom.length, box.length)
+        @test isapprox(bottom.width, box.width)
     end
     let
         @info "Bottom, FlippedPanel"
@@ -165,7 +172,7 @@ end
         bottom = bottom[1]
         @info bottom
         @test bottom.length < bottom.width
-        @test bottom.length == box.width
-        @test bottom.width == box.length
+        @test isapprox(bottom.length, box.width)
+        @test isapprox(bottom.width, box.length)
     end
 end
