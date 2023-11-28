@@ -56,7 +56,7 @@ Unitful.register(@thismodule)
 Turn a Unitful length quantity to a floating point number we can use in SVG.
 """
 function svgdistance(d)::Real
-    ustrip(Real, u"inch", d)
+    ustrip(Float32, u"inch", d)
 end
 
 
@@ -102,27 +102,28 @@ elt(tagname::AbstractString, things...) = elt(identity, tagname, things...)
 
 
 """
-    panelrect(panel::AbstractPanel)
+    panelrect(panel::AbstractPanel, numbering::FinishedPanelNumbering)
 
 Return an SVG element that will draw the representation of the panel.
 """
-function panelrect(panel::AbstractPanel)
+function panelrect(panel::AbstractPanel, numbering::FinishedPanelNumbering)
     # It's confusing that panel.width corresponds to SVG length
     # and panel.length corresponds to SVG width.  Sorry.
     # This is a consequence of the x and y coordinates of a panel
     # corresponding with the panel's length and width respectively.
-    elt("g", :class => string(typeof(panel))) do a
-        a(xmlComment(string("<!-- $(panel.label): ",
-			    "$(panel.width) by $(panel.length), ",
-			    "at $(panel.x), $(panel.y) -->\n")))
-        a(elt("rect",
-	      :x => svgdistance(panel.x),
-	      :y => svgdistance(panel.y),
-	      :width => svgdistance(panel.length),
-	      :height => svgdistance(panel.width),
-              panel_title_elt(panel)))
-        a(panel_text_elt(panel))
-    end
+    elt("g",
+        :class => string(typeof(panel)),
+        xmlComment(string("<!-- $(panel.label): ",
+			  "$(panel.width) by $(panel.length), ",
+			  "at $(panel.x), $(panel.y) -->\n")),
+        elt("rect",
+	    :x => svgdistance(panel.x),
+	    :y => svgdistance(panel.y),
+	    :width => svgdistance(panel.length),
+	    :height => svgdistance(panel.width),
+            panel_title_elt(panel)),
+        # panel_text_elt(panel)
+        panel_number_elt(panel, numbering)...)
 end
 
 
@@ -135,8 +136,8 @@ const SVG_PANEL_MARGIN = 2u"inch"
 export SVG_PANEL_MARGIN, toSVG
 
 
-function toSVG(state::SearchState)::XML.Element
-    rpg = PanelGraph(state)
+function toSVG(numbering::FinishedPanelNumbering)::XML.Element
+    rpg = numbering.panel_graph
     #=
     write(io, """<?xml version="1.0" encoding="UTF-8"?>\n""")
     write(io, """<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n""")
@@ -164,20 +165,21 @@ function toSVG(state::SearchState)::XML.Element
 		ty = svgdistance(y)
                 a(elt("g",
                       :transform => "translate($(tx), $(ty))",
-                      toSVG(stock, rpg)))
+                      toSVG(stock, numbering)))
                 y += minor(stock) + SVG_PANEL_MARGIN
 	    end
         end)
 end
 
         
-function toSVG(panel::AbstractPanel, rpg::PanelGraph)
+function toSVG(panel::AbstractPanel, numbering::FinishedPanelNumbering)
     # Do nothing, We only draw certain types of panel.
 end
 
-function toSVG(panel::BoughtPanel, rpg::PanelGraph)
+function toSVG(panel::BoughtPanel, numbering::FinishedPanelNumbering)
     # We want to have the longer dimension of panel run horizontally.
     # This is already anticipated above wnere we calculate the SVG viewBox.
+    rpg = numbering.panel_graph
     transform = ""
     if panel.length != major(panel)
 	tx = svgdistance(0u"inch")
@@ -186,20 +188,21 @@ function toSVG(panel::BoughtPanel, rpg::PanelGraph)
     end
     elt("g",
         :transform =>transform) do a
-            a(panelrect(panel))
+            a(panelrect(panel, numbering))
 	    for p in rpg[panel]
-	        a(toSVG(p, rpg))
+	        a(toSVG(p, numbering))
 	    end
         end
 end
 
-function toSVG(panel::Panel, rpg::PanelGraph)
+function toSVG(panel::Panel, numbering::FinishedPanelNumbering)
+    rpg = numbering.panel_graph
     elt("g", :class => "Panel") do a
         a(xmlComment(string("<!-- $(panel.label): ",
 			    "$(panel.width) by $(panel.length), ",
 			    "at $(panel.x), $(panel.y) -->\n")))
 	for p in rpg[panel]
-	    a(toSVG(p, rpg))
+	    a(toSVG(p, numbering))
 	end
 	endX = panel.x + panel.length
 	endY = panel.y + panel.width
@@ -216,12 +219,12 @@ function toSVG(panel::Panel, rpg::PanelGraph)
     end
 end
 
-function toSVG(panel::FinishedPanel, rpg::PanelGraph)
-    panelrect(panel)
+function toSVG(panel::FinishedPanel, numbering::FinishedPanelNumbering)
+    panelrect(panel, numbering)
 end
 
-function toSVG(panel::ScrappedPanel, rpg::PanelGraph)
-    panelrect(panel)
+function toSVG(panel::ScrappedPanel, numbering::FinishedPanelNumbering)
+    panelrect(panel, numbering)
 end
 
 panel_text_elt(::AbstractPanel) = nothing
@@ -247,3 +250,25 @@ function panel_text_elt(panel::FinishedPanel)
         "$(panel.length) × $(panel.width)")
 end
 
+panel_number_elt(panel::AbstractPanel,
+                 ::FinishedPanelNumbering) = []
+
+function panel_number_elt(panel::FinishedPanel,
+                          numbering::FinishedPanelNumbering)
+    # Translate to the center of the parent:
+    x = svgdistance(panel.x)
+    y = svgdistance(panel.y)
+    width = svgdistance(panel.length)
+    height = svgdistance(panel.width)
+    center_x = x + width / 2
+    center_y = y + height / 2
+    [ elt("g",
+          # :transform => "translate($center_x $center_y)",
+          elt("text",
+              :x => center_x,
+              :y => center_y,
+              :"tect-anchor" => "middle",
+              :lengthAdjust => "spacingAndGlyphs",
+              "$(numbering(panel))"))
+      ]
+end

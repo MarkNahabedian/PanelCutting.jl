@@ -52,6 +52,7 @@ end
 
 """
     report(::Searcher)
+
 Generate an HTML fragment that provides a detailed report of
 our cut search and results.
 """
@@ -59,6 +60,19 @@ function report(searcher::Searcher;
                 includeCutDiagram=true,
                 includeCutGraph=false,
                 filename=nothing)
+    numbering = FinishedPanelNumbering(searcher.cheapest)
+    finished = searcher.cheapest.finished
+    panel_number(p::FinishedPanel) = numbering(p)
+    function panel_number(wp::AbstractWantedPanel)
+        fps = filter(finished) do fp
+            fp.wanted == wp
+        end
+        if length(fps) == 1
+            panel_number(fps[1])
+        else
+            ""
+        end
+    end
     fragment =
         elt("div") do a
             a(elt("h2", "Panel Cut Report"))
@@ -75,7 +89,7 @@ function report(searcher::Searcher;
             a(elt("table") do a
                   a(elt("thead") do a
                         a(elt("tr") do a
-                              for heading in ("Label", "Length", "Width", "Ok to Flip?")
+                              for heading in ("#", "Label", "Length", "Width", "Ok to Flip?")
                                   a(th(heading))
                               end
                           end)
@@ -83,6 +97,8 @@ function report(searcher::Searcher;
                   a(elt("tbody") do a
                         for panel in searcher.wanted
                             a(elt("tr") do a
+                                  a(td(panel_number(panel),
+                                       :align => "center"))
                                   a(td(panel.label, :align => "center"))
                                   a(td(panel.length, :align => "right"))
                                   a(td(panel.width, :align => "right"))
@@ -152,7 +168,7 @@ function report(searcher::Searcher;
             if includeCutDiagram
                 a(elt("div",
                       :class => "best-socution",
-                      toSVG(searcher.cheapest)))
+                      toSVG(numbering)))
             end
             if includeCutGraph
                 a(elt("div", :class => "cut-graph") do a
