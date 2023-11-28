@@ -179,12 +179,12 @@ end
 function Base.getproperty(panel::FlippedPanel, prop::Symbol)
     was = getfield(panel, :was)
     @match prop begin
-	:length  => was.width
-	:width   => was.length
-	:label   => "flipped $(was.label)"
+	:length    => was.width
+	:width     => was.length
+	:label     => "flipped $(was.label)"
         :thickness => was.thickness
         :material  => was.material
-	_        => getfield(panel, prop)
+	_          => getfield(panel, prop)
     end
 end
     
@@ -361,6 +361,7 @@ function Base.getproperty(panel::Panel, prop::Symbol)
     @match prop begin
         :thickness => cut_from.thickness
         :material  => cut_from.material
+        :label     => typeof(panel)
 	_          => getfield(panel, prop)
     end
 end
