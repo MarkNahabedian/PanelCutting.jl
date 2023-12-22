@@ -1,6 +1,8 @@
 using Pkg
 Pkg.activate("..")
 
+Pkg.add("Documenter")
+
 using Documenter
 using PanelCutting
 
