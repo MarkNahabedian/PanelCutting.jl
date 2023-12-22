@@ -1,6 +1,8 @@
 using Pkg
-Pkg.activate("..")
 
+Pkg.add(url="..")
+Pkg.add("Unitful")
+Pkg.add("UnitfulUS")
 Pkg.add("Documenter")
 
 using Documenter
