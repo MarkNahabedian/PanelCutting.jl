@@ -390,8 +390,7 @@ end
 
 include("test_callerFile.jl")
 
-# dot isn't available in the GitHub actions environment.
-# include("test_readme_examples.jl")
+include("test_readme_examples.jl")
 
 include("test_box.jl")
 
