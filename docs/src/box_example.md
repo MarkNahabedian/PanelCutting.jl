@@ -64,7 +64,7 @@ Box
 ```@example box1
 using PanelCutting, Unitful
 
-my_box = Box(0.3u"m", 0.22u"m", 0.11u"m")
+my_box = Box(0.3u"m", 0.2u"m", 0.1u"m")
 ```
 
 Once the box is defined, one can specify the thickness and material of
