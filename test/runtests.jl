@@ -6,7 +6,6 @@ using UnitfulUS
 # using UnitfulCurrency
 using Test
 using Logging
-using NahaGraphs
 
 
 @testset "AllOf" begin
@@ -213,13 +212,18 @@ function make_test_graphs(state::SearchState, basename::String)
     pg = PanelGraph(state)
     function make_graph(g, fname)
         dotgraph(fname, g, PanelsDotStyle())
-        # dot isn't installed in the GitHub test environment:
-        # rundot(fname)
-        # @info(fname)
+        rundot(fname)
+        @info(fname)
     end
     make_graph(pg, joinpath(@__DIR__, "$basename.dot"))
+    #=
+    Since we switched from NahaGraphs to MetaGraphsNext, the graph
+    transformation code from NahaGraphs isn't evailable.  not a big
+    deal since the PanelCutGraph was not being constructed as
+    intended.  A problem for another day.
     make_graph(PanelCutGraph(state, pg),
                joinpath(@__DIR__, "$basename-pcg.dot"))
+    =#
 end
 
 @testset "Search: fits in one" begin
@@ -369,13 +373,15 @@ end
 end
 
 
+using PanelCutting: add_edge!, query
+
 @testset "Graph" begin
-    g = PanelGraph()
-    injest(g, :a => :b)
-    injest(g, :b => :c)
-    injest(g, :a => 1)
-    injest(g, 1 => 1.1)
-    injest(g, 1 => 1.2)
+    g = PanelCutting.PanelGraph{Union{Symbol, Number}}()
+    add_edge!(g, :a => :b)
+    add_edge!(g, :b => :c)
+    add_edge!(g, :a => 1)
+    add_edge!(g, 1 => 1.1)
+    add_edge!(g, 1 => 1.2)
     @test query(g, :a, Symbol) == Set([:a => :b])
     @test query(g, Symbol, :c) == Set([:b => :c])
     @test length(query(g, Any, Number)) == 3

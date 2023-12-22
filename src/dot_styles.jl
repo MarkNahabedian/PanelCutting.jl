@@ -17,7 +17,7 @@ function prettydistance(x)
     return "$(s)inch"
 end
 
-function NahaGraphs.dotID(panel::AbstractPanel)
+function dotID(panel::AbstractPanel)
     t = split(string(typeof(panel)), ".")[end]
     "$(t)_$(string(panel.uid))"
 end
@@ -67,7 +67,7 @@ end
 
 dotshape(panel::AbstractPanel) = "box"
 
-function NahaGraphs.node_attributes(::PanelsDotStyle, node)
+function node_attributes(::PanelsDotStyle, node)
     Dict([
         (:label, dotlabel(node)),
         (:shape, dotshape(node))

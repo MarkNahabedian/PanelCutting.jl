@@ -14,8 +14,7 @@ using DisplayAs
 using UUIDs
 using Plots
 using Logging
-using NahaGraphs
-
+using Graphviz_jll
 
 # Work around issues with UnitfulCurrency
 function money(amount)
@@ -41,6 +40,9 @@ end
 export money, MoneyType, unmoney
 
 
+include("dot/generic_dot.jl")
+include("dot/dot_style.jl")
+
 include("AllOf.jl")
 include("axes.jl")
 include("panels.jl")
@@ -49,7 +51,7 @@ include("cutting.jl")
 include("supplier.jl")
 include("search.jl")
 include("report.jl")
-include("graph.jl")
+include("metagraphsnext_interface.jl")
 include("panel_numbers.jl")
 include("dot_styles.jl")
 include("PanelCutGraph.jl")

@@ -6,10 +6,10 @@ export PanelCutGraph
 struct PanelCutGraph
     state::SearchState
     pg::PanelGraph
-    graph::DiGraph
+    graph
     
     function PanelCutGraph(state::SearchState, pg::PanelGraph)
-        pcg = new(state, pg, DiGraph(pg.graph))
+        pcg = new(state, pg, PanelGraph(pg))
         applyRule!(pcg, insertCutNodes)
         applyRule!(pcg, elideBoughtPanels)
         applyRule!(pcg, elideTerminalPanels)
@@ -21,11 +21,11 @@ struct PanelCutGraph
 end
 
 # Delegate to the underlying graphs
-NahaGraphs.edges(pcg::PanelCutGraph) = edges(pcg.graph)
-NahaGraphs.nodes(pcg::PanelCutGraph) = nodes(pcg.graph)
-NahaGraphs.add_edge!(pcg::PanelCutGraph, edge) = add_edge!(pcg.graph, edge)
-NahaGraphs.remove_edge!(pcg::PanelCutGraph, edge) = remove_edge!(pcg.graph, edge)
-NahaGraphs.query(pcg::PanelCutGraph, from, to) = query(pcg.graph, from, to)
+edges(pcg::PanelCutGraph) = edges(pcg.graph)
+nodes(pcg::PanelCutGraph) = nodes(pcg.graph)
+add_edge!(pcg::PanelCutGraph, edge) = add_edge!(pcg.graph, edge)
+remove_edge!(pcg::PanelCutGraph, edge) = remove_edge!(pcg.graph, edge)
+query(pcg::PanelCutGraph, from, to) = query(pcg.graph, from, to)
 
 # Delegation for Dict support:
 Base.keys(g::PanelCutGraph) = keys(g.graph)
@@ -34,15 +34,15 @@ Base.haskey(g::PanelCutGraph, key) = haskey(g.graph, key)
 Base.getindex(g::PanelCutGraph, key) = getindex(g.graph, key)
 
 # Same display attributes as PanelGraph:
-NahaGraphs.graph_attributes(pcg::PanelCutGraph) = graph_attributes(pcg.pg)
-NahaGraphs.node_attributes(pcg::PanelCutGraph) = node_attributes(pcg.pg)
-NahaGraphs.edge_attributes(pcg::PanelCutGraph) = edge_attributes(pcg.pg)
+graph_attributes(pcg::PanelCutGraph) = graph_attributes(pcg.pg)
+node_attributes(pcg::PanelCutGraph) = node_attributes(pcg.pg)
+edge_attributes(pcg::PanelCutGraph) = edge_attributes(pcg.pg)
 
-function NahaGraphs.dotnode(io::IO, graph::PanelCutGraph, panel::AbstractPanel)
+function dotnode(io::IO, graph::PanelCutGraph, panel::AbstractPanel)
     dotnode(io, graph.pg, panel)
 end
 
-function NahaGraphs.dotedge(io::IO, graph::PanelCutGraph, from, to)
+function dotedge(io::IO, graph::PanelCutGraph, from, to)
     dotedge(io, graph.pg, from, to)
 end
 
@@ -51,7 +51,7 @@ struct CutNode
     panel2::Union{Nothing, Panel}
 end
 
-function NahaGraphs.dotID(n::CutNode)
+function dotID(n::CutNode)
     return "CutNode_$(n.panel1.cut_from.uid)"
 end
 
