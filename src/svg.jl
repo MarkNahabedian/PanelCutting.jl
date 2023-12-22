@@ -75,7 +75,7 @@ resulting element.
 """
 function elt(f::Function, tagname::AbstractString, things...)
     attributes = OrderedDict()
-    children = Vector{Union{CData, Comment, Element, String}}()
+    children = Vector{Union{String, XML.AbstractXMLNode}}()
     function add_thing(s)
         if s isa Pair
             attributes[Symbol(s.first)] = string(s.second)
