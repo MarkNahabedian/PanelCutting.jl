@@ -42,6 +42,10 @@ nodes(pg::PanelGraph) = MetaGraphsNext.labels(pg.graph)
 edges(pg::PanelGraph) =
     map(e -> e[1] => e[2], MetaGraphsNext.edge_labels(pg.graph))
 
+Base.getindex(pg::PanelGraph, key) =
+    (p -> p.second).(filter(p -> p.first == key, edges(pg)))
+
+
 add_edge!(pg::PanelGraph{T}, edge1::T, edge2::T) where T =
     Graphs.add_edge!(pg.graph,
                      ensure_vertex(pg, edge1),
