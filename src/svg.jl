@@ -145,8 +145,9 @@ function toSVG(numbering::FinishedPanelNumbering)::XML.Element
     =#
     # Outermost SVG:
     vpwidth = svgdistance(maximum(major.(nodes(rpg))) + 2 * SVG_PANEL_MARGIN)
-    vpheight = svgdistance(sum(minor.(filter(p -> p isa BoughtPanel, collect(nodes(rpg))))) + 
-	2 * SVG_PANEL_MARGIN)
+    vpheight = svgdistance(sum(minor.(Iterators.filter(
+        p -> p isa BoughtPanel,
+        nodes(rpg)))) + 2 * SVG_PANEL_MARGIN)
     elt("svg",
         :xmlns => "http://www.w3.org/2000/svg",
 	:width =>"90%",
@@ -155,7 +156,8 @@ function toSVG(numbering::FinishedPanelNumbering)::XML.Element
         elt("style", :type => "text/css", STYLESHEET),
         elt("g", :class => "everything") do a
 	    y = SVG_PANEL_MARGIN
-	    for stock in filter((p) -> p isa BoughtPanel, collect(nodes(rpg)))
+	    for stock in Iterators.filter((p) -> p isa BoughtPanel,
+                                          nodes(rpg))
 		# We want to have the longer dimension of panel run
 		# horizontally.  If so, we can apply a 90 degree rotation.
 		# Here we just translate successive stock panels (BoughtPanel)
