@@ -171,12 +171,14 @@ function report(searcher::Searcher;
                       toSVG(numbering)))
             end
             if includeCutGraph
+                error("Panel cut graph is not currently supported.")
                 a(elt("div", :class => "cut-graph") do a
                       io = IOBuffer()
 		      # Run the GraphViz dot command, inlining the SVG output
 		      # into the report:
                       dot, err = runCmd(`dot -Tsvg`, io)
-                      dotgraph(dot, PanelCutGraph(searcher.cheapest), PanelsDotStyle())
+                      dotgraph(dot, PanelCutGraph(searcher.cheapest),
+                               PanelsDotStyle())
                       close(dot)
                       err = read(err)
                       if length(err) > 0
