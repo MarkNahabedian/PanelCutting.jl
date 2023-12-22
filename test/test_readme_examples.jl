@@ -42,18 +42,21 @@ wanted = [
         # the bottom will occupy the full footprint of the box with
         # the sides and ends sitting on top of it
         length = box_length,
-        width = box_width),
+        width = box_width,
+        thickness = stock_thickness),
     # Sometimes we need several instances of the same shaped panel.
     # WantedPanel can take a pre-multiplier:
     (2 * WantedPanel(
         label = "side",
         length = box_length - 2 * stock_thickness,
-        width = box_depth - stock_thickness)
+        width = box_depth - stock_thickness,
+        thickness = stock_thickness)
      )...,  # Pre-multiplying gives a Vector, which we must spread.
     (2 * WantedPanel(
         label = "end",
         length = box_width - 2 * stock_thickness,
-        width = box_depth - stock_thickness)
+        width = box_depth - stock_thickness,
+        thickness = stock_thickness)
      )...
          ]
 
@@ -74,18 +77,21 @@ BOULTER_PLYWOOD = Supplier(
     available_stock = [
         AvailablePanel(
             label = "1/4 5 × 5 Baltic Birch",
+            thickness = (1/4)u"inch",
             length = 5u"ft",
             width = 5u"ft",
             cost=69.00   # I've not been able to get UnitfulCurrency to work
         ),
         AvailablePanel(
             label = "1/4 30 × 60 Baltic Birch",
+            thickness = (1/4)u"inch",
             length = 60u"inch",
             width = 30u"inch",
             cost=42.00
         ),
         AvailablePanel(
             label = "1/4 30 × 30 Baltic Birch",
+            thickness = (1/4)u"inch",
             length = 30u"inch",
             width = 30u"inch",
             cost=26.00)
@@ -109,7 +115,7 @@ we can search for an optimal cut pattern.
     rm("example_panel_cut_report.html"; force=true)
     report(searcher;
            includeCutDiagram=true,
-           includeCutGraph=true,
+           includeCutGraph=false,
            filename="example_panel_cut_report.html")
 end
 
