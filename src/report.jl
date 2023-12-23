@@ -167,7 +167,7 @@ function report(searcher::Searcher;
               end)
             if includeCutDiagram
                 a(elt("div",
-                      :class => "best-socution",
+                      :class => "best-solution",
                       toSVG(numbering)))
             end
             if includeCutGraph
