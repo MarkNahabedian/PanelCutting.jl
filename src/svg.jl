@@ -136,7 +136,7 @@ const SVG_PANEL_MARGIN = 2u"inch"
 export SVG_PANEL_MARGIN, toSVG
 
 
-function toSVG(numbering::FinishedPanelNumbering)::XML.Element
+function toSVG(numbering::FinishedPanelNumbering)
     rpg = numbering.panel_graph
     #=
     write(io, """<?xml version="1.0" encoding="UTF-8"?>\n""")
@@ -269,7 +269,7 @@ function panel_number_elt(panel::FinishedPanel,
           elt("text",
               :x => center_x,
               :y => center_y,
-              :"tect-anchor" => "middle",
+              :"text-anchor" => "middle",
               :lengthAdjust => "spacingAndGlyphs",
               "$(numbering(panel))"))
       ]
