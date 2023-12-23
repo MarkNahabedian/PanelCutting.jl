@@ -200,9 +200,7 @@ function report(searcher::Searcher;
             filename
         end
         open(ofile, "w") do out
-            @assert fragment isa XML.Element
-            @assert fragment isa XML.AbstractXMLNode
-            show(out, MIME"text/xml"(), report_html_wrapper(fragment))
+            XML.write(out, report_html_wrapper(fragment))
         end
         @info "Wrote $ofile"
         ofile

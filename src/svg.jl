@@ -95,7 +95,7 @@ function elt(f::Function, tagname::AbstractString, things...)
         add_thing(thing)
     end
     f(add_thing)
-    XML.Element(tagname, attributes, children)
+    Node(XML.Element, tagname, attributes, nothing, children)
 end
 
 elt(tagname::AbstractString, things...) = elt(identity, tagname, things...)
