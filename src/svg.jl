@@ -113,9 +113,9 @@ function panelrect(panel::AbstractPanel, numbering::FinishedPanelNumbering)
     # corresponding with the panel's length and width respectively.
     elt("g",
         :class => string(typeof(panel)),
-        xmlComment(string("<!-- $(panel.label): ",
+        xmlComment(string(" $(panel.label): ",
 			  "$(panel.width) by $(panel.length), ",
-			  "at $(panel.x), $(panel.y) -->\n")),
+			  "at $(panel.x), $(panel.y) ")),
         elt("rect",
 	    :x => svgdistance(panel.x),
 	    :y => svgdistance(panel.y),
@@ -200,9 +200,9 @@ end
 function toSVG(panel::Panel, numbering::FinishedPanelNumbering)
     rpg = numbering.panel_graph
     elt("g", :class => "Panel") do a
-        a(xmlComment(string("<!-- $(panel.label): ",
+        a(xmlComment(string(" $(panel.label): ",
 			    "$(panel.width) by $(panel.length), ",
-			    "at $(panel.x), $(panel.y) -->\n")))
+			    "at $(panel.x), $(panel.y) ")))
 	for p in rpg[panel]
 	    a(toSVG(p, numbering))
 	end
