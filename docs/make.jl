@@ -16,6 +16,8 @@ makedocs(;
     authors="MarkNahabedian <naha@mit.edu> and contributors",
     repo="https://github.com/MarkNahabedian/PanelCutting.jl/blob/{commit}{path}#{line}",
     sitename="PanelCutting.jl",
+    checkdocs = :exports,
+    warnonly = [:missing_docs],
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         canonical="https://MarkNahabedian.github.io/PanelCutting.jl",
