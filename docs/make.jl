@@ -1,10 +1,4 @@
-using Pkg
-
 Pkg.activate("..")
-
-Pkg.add("Unitful")
-Pkg.add("UnitfulUS")
-Pkg.add("Documenter")
 
 using Documenter
 using PanelCutting
