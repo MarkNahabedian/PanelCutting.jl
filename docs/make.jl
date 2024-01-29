@@ -1,6 +1,7 @@
 using Pkg
 
-Pkg.activate("..")
+Pkg.activate(joinpath(@__DIR__, ".."))
+Pkg.add("Documenter")
 
 using Documenter
 using PanelCutting
