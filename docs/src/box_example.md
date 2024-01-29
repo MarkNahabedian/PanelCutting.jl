@@ -55,7 +55,10 @@ Filter = t -> t <: PanelCutting.JointType
 
 ## Defining a box
 
-A box is first specified by its outside dimensions.
+A box is first specified by its outside dimensions.  The `Unitful`
+package (and optionally `UnitfulUS`) are used so we can specify units
+for the box dimensions.
+
 
 ```@docs
 Box
@@ -74,6 +77,7 @@ each face, whether a face is open, and its grain direction:
 my_box.open[Top()] = true
 
 do_faces(my_box) do face
+    # All faces are 5mm baltic birch:
     my_box.thickness[face] = 5u"mm"
     my_box.material[face] = "Baltic Birch"
 end
@@ -83,12 +87,14 @@ One can also specify the joint type to be used for each edge:
 
 ```@example box1
 let
+    # Use finger joints between each pair of sides:
     sides = [Left(), Back(), Right(), Front()]
     for i in 0:(length(sides) - 1)
         e = Edge(sides[i + 1],
                  sides[1 + (i + 1) % length(sides)])
         my_box.joint_types[e] = FingerJoint()
     end
+    # Use a dado joint for each edge of the bottom:
     for n in neighbors(Bottom())
         edge = Edge(Bottom(), n)
         my_box.joint_types[edge] = DadoJoint(Bottom(), 2u"mm")
