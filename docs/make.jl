@@ -30,6 +30,6 @@ makedocs(;
 
 deploydocs(;
     repo="github.com/MarkNahabedian/PanelCutting.jl",
-    devbranch="main"
+    devbranch="master"
 )
 
