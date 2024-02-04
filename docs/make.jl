@@ -1,5 +1,5 @@
 
-insert!(LOAD_PATH, 1, "..")
+insert!(LOAD_PATH, 1, joinpath(@__DIR__, ".."))
 
 using Documenter
 using PanelCutting
