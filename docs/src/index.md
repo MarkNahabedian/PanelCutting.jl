@@ -4,6 +4,9 @@ This package implements a utility for determining the optimal sequence
 of cuts to produce a set of rectangular panels of specified sizes from
 sheet good stock (e.g. plywood).
 
+New users will probably want to go straight to the
+[box example](box_example.md) to get started.
+
 
 ```@contents
 Pages = [ "index.md" ]
@@ -67,6 +70,7 @@ report
 PanelCutting.runCmd
 smaller
 Searcher
+Supplier
 svgdistance
 ```
 
