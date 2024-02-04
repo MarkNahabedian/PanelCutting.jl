@@ -1,7 +1,5 @@
-using Pkg
 
-Pkg.activate(joinpath(@__DIR__, ".."))
-Pkg.add("Documenter")
+insert!(LOAD_PATH, 1, "..")
 
 using Documenter
 using PanelCutting
