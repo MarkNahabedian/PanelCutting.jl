@@ -79,7 +79,7 @@ WantedPanels(my_box)
 
 
 To make our box, we first need sheet stock, which comes from a
-Supplier.
+[`Supplier`](@ref).
 
 ```@example box1
 BOULTER_PLYWOOD = Supplier(
