@@ -1,6 +1,5 @@
 module PanelCutting
 
-using Revise
 using Printf
 using Markdown
 using Unitful
