@@ -221,7 +221,7 @@ wantsmatch(p1::FlippedPanel, p2::WantedPanel) = p1.was == p2
 
 export FlippedPanel, flipped, orFlipped, wantsmatch
 
-function Base.:*(how_many::Integer, p::WantedPanel)::Vector{WantedPanel}
+function Base.:*(how_many::Integer, p::AbstractWantedPanel)::Vector{AbstractWantedPanel}
     map(1:how_many) do index
         WantedPanel(label = "$(p.label) $index",
                     length = p.length,
@@ -230,6 +230,15 @@ function Base.:*(how_many::Integer, p::WantedPanel)::Vector{WantedPanel}
                     material = p.material)
     end
 end
+
+function Base.:*(how_many::Integer, p::Vector{<:AbstractWantedPanel})::Vector{AbstractWantedPanel}
+    result = []
+    for p1 in p
+        append!(result, (how_many * p1))
+    end
+    result
+end
+
 
 function uniqueWantedPanels(panels)::Vector{AbstractWantedPanel}
     result = Vector{AbstractWantedPanel}()
