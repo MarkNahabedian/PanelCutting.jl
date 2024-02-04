@@ -131,6 +131,8 @@ report(searcher;
        filename="box_example_panel_cut_report.html")
 ```
 
+[View the result](box_example_panel_cut_report.html).
+
 
 
 ## Box Faces
