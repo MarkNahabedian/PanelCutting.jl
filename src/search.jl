@@ -4,7 +4,7 @@ md"""
 """
 
 struct SearchState
-    # panels are removed from wanten once they are finished.
+    # panels are removed from wanted once they are finished.
     wanted::Panels{AbstractWantedPanel}
     bought::Panels{BoughtPanel}
     finished::Panels{FinishedPanel}
@@ -73,13 +73,13 @@ function SearchState(precursor::SearchState, cost,
     state = SearchState(;
 		        wanted=wanted,
 		        bought=bought,
-		        finished=if finished == nothing
-                            precursor.finished
-                        else
-                            Panels{FinishedPanel}(
-			        union((finished,),
-				      precursor.finished))
-                        end,
+		        finished=(if finished == nothing
+                                      precursor.finished
+                                  else
+                                      Panels{FinishedPanel}(
+			                  union((finished,),
+				                precursor.finished))
+                                  end),
 		        scrapped=Panels{ScrappedPanel}(
 			    union(newlyscrapped, precursor.scrapped)),
 		        working=Panels{CuttablePanel}(working),
