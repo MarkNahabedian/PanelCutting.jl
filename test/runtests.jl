@@ -327,7 +327,8 @@ end
 end
 
 @testset "FlippedPanel" begin
-    w = WantedPanel(width=1u"inch", length=2u"inch", label="foo", thickness= 0.5u"inch")
+    w = WantedPanel(width=1u"inch", length=2u"inch", label="foo",
+                    thickness= 0.5u"inch")
     f = flipped(w)
     @test w.length == f.width
     @test w.width == f.length
@@ -336,6 +337,7 @@ end
     @test wantsmatch(f, f)
     @test wantsmatch(w, f)
     @test wantsmatch(f, w)
+    # There's no point to flipping a square panel:
     @test flipped(WantedPanel(width=10u"inch",
 			      length=10u"inch",
                               thickness= 0.5u"inch",
