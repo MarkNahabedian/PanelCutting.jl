@@ -3,6 +3,7 @@ export inPluto, report
 
 """
     inPluto()::Bool
+
 Return true if the notebook is being run in Pluto, artyher than
 directly in Julia (e.g. command line or REPL).
 """
@@ -13,6 +14,7 @@ end
 
 """
     callerFile()
+
 Return the path of the file of the function that called callerFile's caller.
 Also return the line number.
 """
@@ -32,6 +34,7 @@ end
 
 """
     runCmd(cmd::Cmd, cmdOutput::IO)::IO
+
 Run the external command `cmd`, which will write output to `cmdOutput`.
 The stream that's returnd can be written to to provide inoput to the
 command.  The second return value is the stderr stream.
@@ -73,6 +76,8 @@ function report(searcher::Searcher;
             ""
         end
     end
+    sigfig(x) = @sprintf("%.3f%s", ustrip(x), unit(x))
+    cell_style = :style => "padding-left: 1em; padding-right: 1em;"
     fragment =
         elt("div") do a
             a(elt("h2", "Panel Cut Report"))
@@ -80,16 +85,17 @@ function report(searcher::Searcher;
                   "Report of what stock to purchase and what",
                   " cuts to make to get panels of these sizes"))
             function th(heading)
-                elt("th", heading)
+                elt("th", cell_style, heading)
             end
             function td(things...)
-                elt("td", things...)
+                elt("td", cell_style, things...)
             end
 	    # Table of wanted panels:
             a(elt("table") do a
                   a(elt("thead") do a
                         a(elt("tr") do a
-                              for heading in ("#", "Label", "Length", "Width", "Ok to Flip?")
+                              for heading in ("#", "Label", "Length",
+                                              "Width", "Ok to Flip?")
                                   a(th(heading))
                               end
                           end)
@@ -100,8 +106,8 @@ function report(searcher::Searcher;
                                   a(td(panel_number(panel),
                                        :align => "center"))
                                   a(td(panel.label, :align => "center"))
-                                  a(td(panel.length, :align => "right"))
-                                  a(td(panel.width, :align => "right"))
+                                  a(td(sigfig(panel.length), :align => "right"))
+                                  a(td(sigfig(panel.width), :align => "right"))
                                   a(td(:align => "center",
                                        panel isa FlippedPanel ? "yes" : "no"))
                               end)
@@ -142,9 +148,9 @@ function report(searcher::Searcher;
                                                      :rowspan => length(panels)))
                                             end
                                             a(td(p.label, :align => "center"))
-                                            a(td(p.length, :align => "right"))
-                                            a(td(p.width, :align => "right"))
-                                            a(td(area(p), :align => "right"))
+                                            a(td(sigfig(p.length), :align => "right"))
+                                            a(td(sigfig(p.width), :align => "right"))
+                                            a(td(sigfig(area(p)), :align => "right"))
                                             a(td(@sprintf("%.2f%%",
 						          100 * convert(Float64, area(p)/bought_area)),
 				                 :align => "right"))
