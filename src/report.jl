@@ -120,8 +120,8 @@ function report(searcher::Searcher;
                 return
             else
                 a(elt("p",
-                      "The best solution has a cost of ",
-                      "$(searcher.cheapest.accumulated_cost)."))
+                      @sprintf("The best solution has a cost of %0.2f.",
+                               searcher.cheapest.accumulated_cost)))
             end
             # Table of panel areas
             a(elt("div", :class => "panel-areas") do a
