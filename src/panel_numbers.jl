@@ -42,7 +42,10 @@ end
 
 function assign_nunbers(n::FinishedPanelNumbering, panel::CuttablePanel)
     start = n.next
-    for (from, to) in query(n.panel_graph, panel, AbstractPanel)
+    for (from, to) in sort(collect(query(n.panel_graph,
+                                         panel, AbstractPanel));
+                           # Sort by position in the precursor panel:
+                           by = p -> p.second.x^2 + p.second.y^2)
         @assert from == panel
         assign_nunbers(n, to)
     end

@@ -21,6 +21,8 @@ struct PanelGraph{T}
                                         label_type=T))
 end
 
+Base.length(pg::PanelGraph) = length(pg.graph)
+
 
 # Most of the graph code in PanelCutting just adds AbstractPanel to
 # AbstractPanel edges to a graph and assumes those AbstractPanel nodes
