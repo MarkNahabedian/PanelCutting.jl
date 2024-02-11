@@ -101,7 +101,8 @@ function report(searcher::Searcher;
                           end)
                     end)
                   a(elt("tbody") do a
-                        for panel in searcher.wanted
+                        sorted = sort(searcher.wanted; by=panel_number)
+                        for panel in sorted
                             a(elt("tr") do a
                                   a(td(panel_number(panel),
                                        :align => "center"))
