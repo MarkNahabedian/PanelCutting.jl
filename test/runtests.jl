@@ -340,7 +340,9 @@ end
     @test wantsmatch(w, f)
     @test wantsmatch(f, w)
     @test !wantsmatch(w2, w)
+    @test !wantsmatch(w, w2)
     @test !wantsmatch(w2, f)
+    @test !wantsmatch(f, w2)
     # There's no point to flipping a square panel:
     @test flipped(WantedPanel(width=10u"inch",
 			      length=10u"inch",
