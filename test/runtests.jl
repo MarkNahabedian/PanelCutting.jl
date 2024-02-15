@@ -366,11 +366,11 @@ end
     @test wanted[1].length == wanted[2].length
     @test wanted[1].width == wanted[2].width
     labels = map(wanted) do p; p.label; end
-    index = 1
-    while labels[1][index] == labels[2][index]
-        index += 1
-    end
-    @test map(labels) do l; parse(Int, l[index:end]); end == 1:2
+    re = r"(?<num>[0-9]+)/(?<denom>[0-9]+)$"
+    @test (map(labels) do l
+               m = match(re, l)
+               parse(Int, m["num"])
+           end) == 1:2
 end
 
 @testset "multiply orFlipped" begin

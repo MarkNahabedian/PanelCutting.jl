@@ -115,7 +115,7 @@ end
 
 export panelUID
 export compatible
-export AbstractPanel, AbstractWantedPanel, FlippedPanel, WantedPanel
+export AbstractPanel, AbstractWantedPanel, FlippedPanel, orFlipped, WantedPanel
 export AvailablePanel, CuttablePanel, BoughtPanel, Panel,  TerminalPanel
 export FinishedPanel, ScrappedPanel, Panels
 export progenitor
@@ -221,13 +221,19 @@ wantsmatch(p1::FlippedPanel, p2::WantedPanel) = p1.was == p2
 
 export FlippedPanel, flipped, orFlipped, wantsmatch
 
-function Base.:*(how_many::Integer, p::AbstractWantedPanel)::Vector{AbstractWantedPanel}
+function Base.:*(how_many::Integer, p::WantedPanel)::Vector{WantedPanel}
     map(1:how_many) do index
-        WantedPanel(label = "$(p.label) $index",
+        WantedPanel(label = "$(p.label) $index/$how_many",
                     length = p.length,
                     width = p.width,
                     thickness = p.thickness,
                     material = p.material)
+    end
+end
+
+function Base.:*(how_many::Integer, p::FlippedPanel)::Vector{FlippedPanel}
+    map(1:how_many) do index
+        FlippedPanel(; was=p.was)
     end
 end
 
@@ -240,6 +246,7 @@ function Base.:*(how_many::Integer, p::Vector{<:AbstractWantedPanel})::Vector{Ab
 end
 
 
+# I don't recall what problem this is meant to solve.
 function uniqueWantedPanels(panels)::Vector{AbstractWantedPanel}
     result = Vector{AbstractWantedPanel}()
     have = []
