@@ -221,6 +221,8 @@ function toSVG(panel::Panel, numbering::FinishedPanelNumbering)
     end
 end
 
+# We could just define a single method on TerminalPanel rather than
+# methods on both FinishedPanel and ScrappedPanel.
 function toSVG(panel::FinishedPanel, numbering::FinishedPanelNumbering)
     panelrect(panel, numbering)
 end
