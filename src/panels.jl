@@ -176,21 +176,17 @@ function FlippedPanel(was::WantedPanel)
     FlippedPanel(; was=was)
 end
 
-function Base.getproperty(panel::FlippedPanel, prop::Symbol)
-    was = getfield(panel, :was)
-    @match prop begin
-	:length    => was.width
-	:width     => was.length
-	:label     => "flipped $(was.label)"
-        :thickness => was.thickness
-        :material  => was.material
-	_          => getfield(panel, prop)
-    end
-end
-    
-function Base.propertynames(panel::FlippedPanel, private::Bool=false)
-    (:length, :width, :label, :thickness, :material, fieldnames(typeof(panel))...)
-end
+@delegate FlippedPanel was thickness material
+
+Base.getproperty(panel::FlippedPanel, ::Val{:length}) = panel.was.width
+
+Base.getproperty(panel::FlippedPanel, ::Val{:width}) = panel.was.length
+
+Base.getproperty(panel::FlippedPanel, ::Val{:label}) =
+    "flipped $(panel.was.label)"
+
+@property_trampolines FlippedPanel
+
 
 function flipped(panel::WantedPanel)
     if panel.length == panel.width
@@ -293,17 +289,10 @@ function AvailablePanel(label::String,
                    thickness=thickness, cost=cost)
 end
 		
-function Base.getproperty(panel::AvailablePanel, prop::Symbol)
-    @match prop begin
-	:x  => 0u"inch"
-	:y  => 0u"inch"
-	_   => getfield(panel, prop)
-    end
-end
-	
-function Base.propertynames(panel::AbstractPanel, private::Bool=false)
-    (:x, :y, fieldnames(typeof(panel))...)
-end
+Base.getproperty(panel::AvailablePanel, ::Val{:x}) = 0u"inch"
+Base.getproperty(panel::AvailablePanel, ::Val{:y}) = 0u"inch"
+
+@property_trampolines AvailablePanel
 
 
 """
@@ -320,25 +309,9 @@ function BoughtPanel(was::AvailablePanel)
     BoughtPanel(; was=was)
 end
 
-function Base.getproperty(panel::BoughtPanel, prop::Symbol)
-    was = getfield(panel, :was)
-    @match prop begin
-	:x       => was.x
-	:y       => was.y
-	:length  => was.length
-	:width   => was.width
-	:label   => was.label
-	:cost    => was.cost
-        :thickness => was.thickness
-        :material  => was.material
-	_        => getfield(panel, prop)	
-    end
-end
+@delegate BoughtPanel was x y length width label cost thickness material
 
-function Base.propertynames(panel::BoughtPanel, private::Bool=false)
-    (:x, :y, :length, :width, :label, :cost, :thickness, :material,
-     fieldnames(typeof(panel))...)
-end
+@property_trampolines BoughtPanel
 
 
 """
@@ -372,19 +345,11 @@ struct Panel <: CuttablePanel
     end
 end
 
-function Base.getproperty(panel::Panel, prop::Symbol)
-    cut_from = getfield(panel, :cut_from)
-    @match prop begin
-        :thickness => cut_from.thickness
-        :material  => cut_from.material
-        :label     => typeof(panel)
-	_          => getfield(panel, prop)
-    end
-end
+@delegate Panel cut_from thickness material
 
-function Base.propertynames(panel::Panel, private::Bool=false)
-    (:thickness, :material, fieldnames(typeof(panel))...)
-end
+Base.getproperty(panel::Panel, ::Val{:label}) = typeof(panel)
+
+@property_trampolines Panel
 
 
 """
@@ -400,25 +365,12 @@ end
 
 
 # delegations from ScrappedPanel to the Panel we're tagging as too small
-function Base.getproperty(panel::ScrappedPanel, prop::Symbol)
-    was = getfield(panel, :was)
-    @match prop begin
-	:x       => was.x
-	:y       => was.y
-	:length  => was.length
-	:width   => was.width
-	:label   => "scrapped $(panel.uid)"
-	:cost    => was.cost
-        :thickness => was.thickness
-        :material  => was.material
-	_        => getfield(panel, prop)
-    end
-end
+@delegate ScrappedPanel was x y length width cost thickness material
 
-function Base.propertynames(panel::ScrappedPanel; private=false)
-    (:x, :y, :length, :width, :label, :cost, :thickness, :material,
-     fieldnames(typeof(panel))...)
-end
+Base.getproperty(panel::ScrappedPanel, ::Val{:label}) =
+    "scrapped $(panel.uid)"
+
+@property_trampolines ScrappedPanel
 
 
 """
@@ -439,25 +391,12 @@ struct FinishedPanel <: TerminalPanel
     end
 end
     
-function Base.getproperty(panel::FinishedPanel, prop::Symbol)
-    was = getfield(panel, :was)
-    @match prop begin
-	:x         => was.x
-	:y         => was.y
-	:length    => was.length
-	:width     => was.width
-	:label     => getfield(panel, :wanted).label
-	:cost      => was.cost
-        :thickness => was.thickness
-        :material  => was.material
-	_          => getfield(panel, prop)
-    end
-end
+@delegate FinishedPanel was x y length width cost thickness material
 
-function Base.propertynames(panel::FinishedPanel, private::Bool=false)
-    (:x, :y, :length, :width, :label, :cost, :thickness, :material,
-     fieldnames(typeof(panel))...)
-end
+Base.getproperty(panel::FinishedPanel, ::Val{:label}) =
+    getfield(panel, :wanted).label
+    
+@property_trampolines FinishedPanel
 
 
 """

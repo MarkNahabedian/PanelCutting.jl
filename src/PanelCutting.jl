@@ -14,6 +14,7 @@ using UUIDs
 using Plots
 using Logging
 using Graphviz_jll
+using PropertyMethods
 
 # Work around issues with UnitfulCurrency
 function money(amount)
