@@ -1,4 +1,4 @@
-Thecode in this directory was copied from
+The code in this directory was copied from
 https://github.com/MarkNahabedian/NahaGraphs.jl
 when PanelCutting.jl was converted to use
 MetaGraphsNext.jl.
