@@ -5,7 +5,7 @@ md"""
 """
 
 md"""
-The `graph` argumrnt to these functions should support the
+The `graph` argument to these functions should support the
 following methods:
 
   - nodes
@@ -36,8 +36,8 @@ function nodes end
     edges(graph)
 
 Return a collection of all of the edges of `graph`.
-Each element of the collections is a Pair associating one
-nodeof the graph with another.
+Each element of the collection is a Pair associating one
+node of the graph with another.
 """
 function edges end
 
@@ -215,7 +215,7 @@ function diarc(io::IO, arc::Pair, kwargs...)
 end
 
 """
-diark is a convenience function for `dotedge` methods to call.
+diarc is a convenience function for `dotedge` methods to call.
 """
 function diarc(io::IO, from, to; kwargs...)
     attrs = dot_attributes_string(; kwargs...)
