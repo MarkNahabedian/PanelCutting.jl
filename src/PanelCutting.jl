@@ -9,6 +9,7 @@ using Match
 using DataStructures
 using InteractiveUtils
 using XML
+using NahaXMLUtils
 using DisplayAs
 using UUIDs
 using Plots
