@@ -213,7 +213,7 @@ function panel_text_elt(panel::FinishedPanel)
     elt("text",
 	:x => svgdistance(panel.x + panel.length / 2),
 	:y => svgdistance(panel.y + panel.width / 2),
-        :textLength => svgdistance(panel.length),
+        :textLength => svgdistance(0.2u"inch"),
         :lengthAdjust => "spacingAndGlyphs",
         "$(panel.length) × $(panel.width)")
 end
@@ -235,6 +235,7 @@ function panel_number_elt(panel::FinishedPanel,
           elt("text",
               :x => center_x,
               :y => center_y,
+              :textLength => svgdistance(0.25u"inch"),
               :"text-anchor" => "middle",
               :lengthAdjust => "spacingAndGlyphs",
               "$(numbering(panel))"))
