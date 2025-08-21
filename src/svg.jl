@@ -35,6 +35,7 @@ const STYLESHEET = """
     stroke: white;
     fill: white;
     text-anchor: middle;
+    dominant-baseline: middle;
     font-family: sans-serif;
     font-size: 2px;
     font-weight: bold;
@@ -76,7 +77,7 @@ function panelrect(panel::AbstractPanel, numbering::FinishedPanelNumbering)
     # This is a consequence of the x and y coordinates of a panel
     # corresponding with the panel's length and width respectively.
     elt("g",
-        :class => string(typeof(panel)),
+        :class => nameof(typeof(panel)),
         xmlComment(string(" $(panel.label): ",
 			  "$(panel.width) by $(panel.length), ",
 			  "at $(panel.x), $(panel.y) ")),
@@ -163,7 +164,7 @@ end
 
 function toSVG(panel::Panel, numbering::FinishedPanelNumbering)
     rpg = numbering.panel_graph
-    elt("g", :class => "Panel") do a
+    elt("g", :class => nameof(typeof(panel))) do a
         a(xmlComment(string(" $(panel.label): ",
 			    "$(panel.width) by $(panel.length), ",
 			    "at $(panel.x), $(panel.y) ")))
@@ -211,10 +212,10 @@ end
 
 function panel_text_elt(panel::FinishedPanel)
     elt("text",
-	:x => svgdistance(panel.x + panel.length / 2),
-	:y => svgdistance(panel.y + panel.width / 2),
-        :textLength => svgdistance(0.2u"inch"),
-        :lengthAdjust => "spacingAndGlyphs",
+	:x => "50%",   # svgdistance(panel.x + panel.length / 2),
+	:y => "50%",   # svgdistance(panel.y + panel.width / 2),
+        :textLength => "2em",
+        :lengthAdjust => "spacing",
         "$(panel.length) × $(panel.width)")
 end
 
@@ -235,9 +236,9 @@ function panel_number_elt(panel::FinishedPanel,
           elt("text",
               :x => center_x,
               :y => center_y,
-              :textLength => svgdistance(0.25u"inch"),
+              :textLength => "2em",
               :"text-anchor" => "middle",
-              :lengthAdjust => "spacingAndGlyphs",
+              :lengthAdjust => "spacing",
               "$(numbering(panel))"))
       ]
 end
