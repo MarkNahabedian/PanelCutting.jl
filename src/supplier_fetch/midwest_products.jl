@@ -11,6 +11,9 @@ MIDWEST_PRODUCTS_URL = "https://midwest-products.myshopify.com/search?type=produ
 #  in the browser but only 6 are scraped.  Some of the items are not
 #  sheets but are blocks or glue.
 
+#  Some items include multiple sheets.  Sheet count isn't available on
+#  this page.
+
 function scrape_midwest_products(doc::Gumbo.HTMLDocument)
     item_selector = Cascadia.Selector("div.grid-item.search-result a")
     # "1/16 x 1 x 24 Basswood Sheets-SKU 4102"
@@ -29,10 +32,17 @@ function scrape_midwest_products(doc::Gumbo.HTMLDocument)
             @info("Rejecting, match failed", item_desc, m)
             continue
         end
-        price = join(map(Gumbo.text,
-                         eachmatch(Cascadia.Selector("div.product-item--price span"),
-                                   item_elt)),
-                     "|")
+        price = eachmatch(Cascadia.Selector("div.product-item--price span.visually-hidden"),
+                          item_elt)[2]
+        price = let
+            price_re = r"[$] +(?<value>[0-90-9.]+)"
+            m2 = match(price_re, Gumbo.text(price))
+            if match isa Nothing
+                @info("Can't find price", price, m2)
+                continue
+            end
+            parse(Float64, m2[:value])
+        end
         push!(available,
               AvailablePanel(
                   label = item_desc,       
@@ -40,7 +50,7 @@ function scrape_midwest_products(doc::Gumbo.HTMLDocument)
                   length = parse(Int, m["length"]) * u"inch",
                   width = parse(Int, m["width"]) * u"inch",
                   material = "Basswood",
-                  cost = 10))
+                  cost = price))
     end
     available = sort(available; lt = panel_dimensions_isless)
     Supplier(
