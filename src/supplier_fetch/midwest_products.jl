@@ -1,20 +1,32 @@
 
 MIDWEST_PRODUCTS_URL = "https://midwest-products.myshopify.com/search?type=product&q=basswood"
 
+# ISSUES:
+
+#  There wre multiple pages.  There are page number buttons and next
+#  and previous buttons at the bottom of the page but they all use the
+#  same URL.  I don't see how it knows which page to show.
+
+#  We're not getting all of the items from a page.  20 are displayed
+#  in the browser but only 6 are scraped.  Some of the items are not
+#  sheets but are blocks or glue.
+
 function scrape_midwest_products(doc::Gumbo.HTMLDocument)
     item_selector = Cascadia.Selector("div.grid-item.search-result a")
     # "1/16 x 1 x 24 Basswood Sheets-SKU 4102"
-    item_regexp = r"(?<thick>[0-9/]+) x (?<width>[0-9]+) x (?<length>[0-9]+) Basswood Sheet[s]?-SKU (?<SKU>[0-9]+)"
+    item_regexp = r"(?<thick>[0-9/]+) x (?<width>[0-9]+) x (?<length>[0-9]+) Basswood Sheets? ?- ?SKU (?<SKU>[0-9]+)"
     available = AvailablePanel[]
     for item_elt in eachmatch(item_selector, doc.root)
         item_p = eachmatch(Cascadia.Selector("p"), item_elt)
         if length(item_p) < 1
+            @info("Regecting, no p", item_elt)
             continue
         end
         item_p = only(item_p)
         item_desc = Gumbo.text(item_p)
         m = match(item_regexp, item_desc)
         if m isa Nothing
+            @info("Rejecting, match failed", item_desc, m)
             continue
         end
         price = join(map(Gumbo.text,
@@ -30,12 +42,12 @@ function scrape_midwest_products(doc::Gumbo.HTMLDocument)
                   material = "Basswood",
                   cost = 10))
     end
+    available = sort(available; lt = panel_dimensions_isless)
     Supplier(
         name = "Midwest Products",
         kerf = 0.036u"inch",    # the measured set of my Japanese pull saw
         cost_per_cut = 1,         # made up.
-        available_stock = available
-    )
+        available_stock = available)
 end
 
 
