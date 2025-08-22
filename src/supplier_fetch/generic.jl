@@ -28,7 +28,6 @@ function panel_dimensions_isless(p1, p2)
         end
         field = field_ordering[fieldnum]
         c = cmp(getfield(p1, field), getfield(p2, field))
-        @info("compare field", field, p1=getfield(p1, field), p2=getfield(p2, field))
         if c < 0
             return true
         end
