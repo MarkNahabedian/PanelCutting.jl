@@ -1,11 +1,18 @@
+using PanelCutting
 using URIs
 using HTTP
 using Unitful
 using UnitfulUS
-import Cascadia
-import Gumbo
+import Cascadia     # CSS selectors for Gumbo documents
+import Gumbo        # Parsed HTML for which we can use Cascadia CSS selectors.
+# add https://github.com/JuliaWeb/HeadlessChromium.jl
+# No, instead we have
+using WebScrapingTools
+using JSON
 
-function fetch_and_parse(url::String)
+
+# This is probably good enough for non-dynamic web pages:
+function fetch_and_parse(url)
     resp = HTTP.request(:GET, MIDWEST_PRODUCTS_URL;
                             detect_content_type=true)
     if resp.status != 200
@@ -37,6 +44,16 @@ function panel_dimensions_isless(p1, p2)
         return compare(fieldnum + 1)
     end
     compare(1)
+end
+
+
+# So that JSON.parsefile can reconstruct Unttful lengths:
+function StructUtils.lift(::Type{LengthType}, s::String)
+    # "24.0 inch"
+    (num, unit) = split(s, " ")
+    num = parse(Float64, num)
+    unit = Unitful.lookup_units([Unitful], Meta.parse(unit))
+    return num * unit
 end
 
 
