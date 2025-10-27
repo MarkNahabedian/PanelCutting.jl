@@ -1,0 +1,5 @@
+[deps]
+NahaXMLUtils = "a43006d0-e7b0-4945-abab-c94506b32220"
+PanelCutting = "c1372bff-64f3-4c29-a5fb-167619e966f3"
+StructUtils = "ec057cc2-7a8d-4b58-b3b3-92acb9f63b42"
+WebScrapingTools = "8afffa6a-3076-4974-917d-2ce0a0fc8257"
