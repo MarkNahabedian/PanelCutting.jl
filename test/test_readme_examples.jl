@@ -116,7 +116,7 @@ we can search for an optimal cut pattern.
     report(searcher;
            includeCutDiagram=true,
            includeCutGraph=false,
-           filename="example_panel_cut_report.html")
+           filename=joinpath(@__DIR__, "example_panel_cut_report.html"))
 end
 
 end

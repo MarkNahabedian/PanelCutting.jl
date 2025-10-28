@@ -396,8 +396,6 @@ using PanelCutting: add_edge!, query
     @test length(query(g, :b, :c)) == 1
 end
 
-include("test_callerFile.jl")
-
 include("test_readme_examples.jl")
 
 include("test_box.jl")

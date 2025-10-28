@@ -36,5 +36,5 @@ numbering.numbers
 report(searcher;
        includeCutDiagram=true,
        includeCutGraph=false,
-       filename="from_box_to_report.html")
+       filename=joinpath(@__DIR__, "from_box_to_report.html"))
 

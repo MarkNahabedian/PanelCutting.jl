@@ -13,26 +13,6 @@ end
 
 
 """
-    callerFile()
-
-Return the path of the file of the function that called callerFile's caller.
-Also return the line number.
-"""
-function callerFile()
-    st = stacktrace(backtrace())
-    #=
-    for i in 1:length(st)
-        frame = st[i]
-        @info("Frame: $i", frame.func, frame.file, frame.line)
-    end
-    =#
-    frame = st[4]
-    return string(frame.file), frame.line
-end
-
-
-
-"""
     runCmd(cmd::Cmd, cmdOutput::IO)::IO
 
 Run the external command `cmd`, which will write output to `cmdOutput`.
@@ -54,10 +34,14 @@ function runCmd(cmd::Cmd, cmdOutput::IO)
 end
 
 """
-    report(::Searcher)
+    report(::Searcher; includeCutDiagram=true, includeCutGraph=false, filename=nothing)
 
 Generate an HTML fragment that provides a detailed report of
 our cut search and results.
+
+If `filename` is specified (it should be an absolute path) then an
+HTML file with that name is written, otherwise an HTML fragment is
+returned.
 """
 function report(searcher::Searcher;
                 includeCutDiagram=true,
@@ -197,20 +181,14 @@ function report(searcher::Searcher;
             end
         end
 
-    if inPluto()
-        fragment
+    if filename isa Nothing
+        return fragment
     else
-        f, _ = callerFile()
-        ofile = if filename == nothing
-            joinpath(dirname(f), splitext(basename(f))[1]*"html")
-        else
-            filename
-        end
-        open(ofile, "w") do out
+        open(filename, "w") do out
             XML.write(out, report_html_wrapper(fragment))
         end
         @info "Wrote $ofile"
-        ofile
+        return filename
     end
 end
 
