@@ -3,6 +3,7 @@ using URIs
 using HTTP
 using Unitful
 using UnitfulUS
+using StructUtils
 import Cascadia     # CSS selectors for Gumbo documents
 import Gumbo        # Parsed HTML for which we can use Cascadia CSS selectors.
 # add https://github.com/JuliaWeb/HeadlessChromium.jl
