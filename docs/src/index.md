@@ -55,7 +55,6 @@ STYLESHEET
 SVG_PANEL_MARGIN
 compatible
 cut
-elt
 fitsin
 inPluto
 major
