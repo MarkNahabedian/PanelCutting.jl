@@ -1,3 +1,5 @@
+export Searcher
+
 
 md"""
 # Searching for an optimal cut sequence
