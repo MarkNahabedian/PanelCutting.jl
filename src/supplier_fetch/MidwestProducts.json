@@ -4,7 +4,7 @@
     "kerf": "0.036 inch",
     "available_stock": [
         {
-            "uid": 25,
+            "uid": 10,
             "label": "1/32 X 2 X 24 Basswood Sheets-SKU 4110",
             "width": "24.0 inch",
             "length": "2.0 inch",
@@ -13,7 +13,7 @@
             "cost": 1.3773333333333333
         },
         {
-            "uid": 22,
+            "uid": 9,
             "label": "1/32 x 3 x 24 Basswood Sheets-SKU 4301",
             "width": "24.0 inch",
             "length": "3.0 inch",
@@ -22,7 +22,7 @@
             "cost": 1.6973333333333334
         },
         {
-            "uid": 18,
+            "uid": 12,
             "label": "1/16 x 3 x 24 Basswood Sheet - SKU 4302",
             "width": "24.0 inch",
             "length": "3.0 inch",
@@ -31,7 +31,7 @@
             "cost": 1.8039999999999998
         },
         {
-            "uid": 16,
+            "uid": 6,
             "label": "1/16 x 4 x 24 Basswood Sheet - SKU 4402",
             "width": "24.0 inch",
             "length": "4.0 inch",
@@ -40,7 +40,7 @@
             "cost": 2.658
         },
         {
-            "uid": 23,
+            "uid": 5,
             "label": "3/32 X 6 X 24 Basswood Sheets-SKU 4126",
             "width": "24.0 inch",
             "length": "6.0 inch",
@@ -49,7 +49,7 @@
             "cost": 7.462000000000001
         },
         {
-            "uid": 15,
+            "uid": 8,
             "label": "1/8 x 1 x 24 Basswood Sheets-SKU 4104",
             "width": "24.0 inch",
             "length": "1.0 inch",
@@ -58,7 +58,7 @@
             "cost": 1.8039999999999998
         },
         {
-            "uid": 24,
+            "uid": 4,
             "label": "1/8 X 2 X 24 Basswood Sheets-SKU 4113",
             "width": "24.0 inch",
             "length": "2.0 inch",
@@ -67,7 +67,7 @@
             "cost": 1.9106666666666667
         },
         {
-            "uid": 21,
+            "uid": 13,
             "label": "1/8 x 3 x 24 Basswood Sheet - SKU 4304",
             "width": "24.0 inch",
             "length": "3.0 inch",
@@ -76,7 +76,7 @@
             "cost": 2.338
         },
         {
-            "uid": 14,
+            "uid": 7,
             "label": "1/8 x 4 x 24 Basswood Sheet - SKU 4404",
             "width": "24.0 inch",
             "length": "4.0 inch",
@@ -85,7 +85,7 @@
             "cost": 3.192
         },
         {
-            "uid": 17,
+            "uid": 11,
             "label": "1/4 x 3 x 24 Basswood Sheet - SKU 4306",
             "width": "24.0 inch",
             "length": "3.0 inch",
@@ -94,7 +94,7 @@
             "cost": 3.405
         },
         {
-            "uid": 20,
+            "uid": 1,
             "label": "1 x 3 x 12 Basswood Block-SKU 4429",
             "width": "12.0 inch",
             "length": "3.0 inch",
@@ -103,7 +103,7 @@
             "cost": 7.46
         },
         {
-            "uid": 19,
+            "uid": 3,
             "label": "2 x 6 x 12 Basswood Block-SKU 4430",
             "width": "12.0 inch",
             "length": "6.0 inch",
@@ -112,7 +112,7 @@
             "cost": 16.0
         },
         {
-            "uid": 26,
+            "uid": 2,
             "label": "2 x 8 x 12 Basswood Block-SKU 4431",
             "width": "12.0 inch",
             "length": "8.0 inch",

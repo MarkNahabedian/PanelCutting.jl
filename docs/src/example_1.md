@@ -5,6 +5,9 @@ are 12 inches long, 6 inches wide and 4 inches deep out of 1/4 inch
 plywood.
 
 ```@example 1
+using Pkg
+# PanelCutting.jl isn't registered:
+Pkg.add(url="https://github.com/MarkNahabedian/PanelCutting.jl")
 using PanelCutting
 using Unitful
 using UnitfulUS

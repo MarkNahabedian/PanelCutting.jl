@@ -1,5 +1,13 @@
 [deps]
+Cascadia = "54eefc05-d75b-58de-a785-1a3403f0919f"
+Gumbo = "708ec375-b3d6-5a57-a7ce-8257bf98657a"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 NahaXMLUtils = "a43006d0-e7b0-4945-abab-c94506b32220"
 PanelCutting = "c1372bff-64f3-4c29-a5fb-167619e966f3"
 StructUtils = "ec057cc2-7a8d-4b58-b3b3-92acb9f63b42"
+URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
 WebScrapingTools = "8afffa6a-3076-4974-917d-2ce0a0fc8257"
+
+[sources]
+WebScrapingTools = {url = "https://github.com/MarkNahabedian/WebScrapingTools.jl"}
