@@ -187,7 +187,7 @@ function report(searcher::Searcher;
         open(filename, "w") do out
             XML.write(out, report_html_wrapper(fragment))
         end
-        @info "Wrote $ofile"
+        @info "Wrote $filename"
         return filename
     end
 end
