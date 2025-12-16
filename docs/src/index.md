@@ -53,7 +53,6 @@ AllOf
 area
 STYLESHEET
 SVG_PANEL_MARGIN
-PanelCutting.callerFile
 compatible
 cut
 elt
