@@ -22,13 +22,15 @@ faces come in three opposite pairs: [`Top`](@ref) and
 
 Once a box is defined, one can specify whether each face is open, or
 the thickness of the panel for that face.  One can also specify what
-material should be used.
+material should be used.  The material is just a string that must
+match that of an [`AvailablePanel`](@ref) in order for that panel to
+be considered.
 
 ```@example box1
 my_box.open[Top()] = true
 
 do_faces(my_box) do face
-    # All faces are 5mm baltic birch:
+    # All faces are 1/4" baltic birch:
     my_box.thickness[face] = (1/4)u"inch"
     my_box.material[face] = "Baltic Birch"
 end
@@ -115,6 +117,7 @@ BOULTER_PLYWOOD = Supplier(
 
 Now we can figure out where to make the cuts.  We can multiply our
 list of WantedPanels by an integer if we want to make several boxes.
+Here we make two:
 
 ```@example box1
 searcher = Searcher(BOULTER_PLYWOOD, 2 * WantedPanels(my_box))
