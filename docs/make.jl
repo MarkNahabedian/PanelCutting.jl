@@ -1,7 +1,10 @@
-
-insert!(LOAD_PATH, 1, joinpath(@__DIR__, ".."))
-
+using Pkg
+Pkg.activate(; temp = true)
+Pkg.add("Documenter")
 using Documenter
+
+Pkg.activate(joinpath(dirname(dirname(@__FILE__)), "Project.toml"))
+
 using PanelCutting
 
 DocMeta.setdocmeta!(PanelCutting, :DocTestSetup, :(using PanelCutting); recursive=true)
